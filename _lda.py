@@ -38,6 +38,17 @@ def get_real_cat(cat, D):
     return out
 
 
+def clf(obj, vocab_, matrix):
+    (wordids, wordcts) = ldaO.parse_doc_list([obj], vocab_)  # TODO переписать костыль
+    wordids = wordids[0]
+    wordcts = wordcts[0]
+    score = [0 for _ in range(117)]  # TODO переписать костыль (количество тем должно загружаться автоматически)
+    for i in range(len(wordids)):
+        for j in range(117):  # TODO переписать костыль (количество тем должно загружаться автоматически)
+            score[j] += matrix[wordids[i]][j] * wordcts[i]
+    return np.argmax(score)  # TODO сделать порог добавления темы
+
+
 def bpt(x):
     if x.body is not None and x.title is not None:
         return x.body + x.title
@@ -71,7 +82,8 @@ def using_lda_no_changes_doc(vocab, K, D):
         print(i)
         d = [d for d in docs[(i * s):((i + 1) * s)]]
         model.update_lambda_docs(d)
-    np.savetxt('lambda', model._lambda.T)
+    # np.savetxt('lambda', model._lambda.T)
+    return model._lambda.T, model._vocab
 
 
 def main_lda():
@@ -91,7 +103,12 @@ def main_lda():
         ddict.extend(i)
     (D, D_c) = decode_from_db(cursor.fetchall(), cat, num)
     real_cat = get_real_cat(cat[num], D)
-    using_lda_no_changes_doc(ddict, len(real_cat), D)
+    (matrix, vocab) = using_lda_no_changes_doc(ddict, len(real_cat), D)
+    cursor.execute("select * from test where test." + groupname[num] + "!= 'None'  limit 10")
+    D = decode_from_db(cursor.fetchall(), cat)
+
+    for i in D:
+        print(clf(bpt(i), vocab, matrix))
 
 
 if __name__ == "__main__":
