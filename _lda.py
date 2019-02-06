@@ -101,13 +101,13 @@ def main_lda():
     ddict = []
     for i in list(C.values()):
         ddict.extend(i)
-    (D, D_c) = decode_from_db(cursor.fetchall(), cat, num)
-    real_cat = get_real_cat(cat[num], D)
-    (matrix, vocab) = using_lda_no_changes_doc(ddict, len(real_cat), D)
-    cursor.execute("select * from test where test." + groupname[num] + "!= 'None'  limit 10")
     D = decode_from_db(cursor.fetchall(), cat)
+    real_cat = get_real_cat(cat[num], D)
+    cursor.execute("select * from test where test." + groupname[num] + "!= 'None'  limit 10")
+    test = decode_from_db(cursor.fetchall(), cat)
+    (matrix, vocab) = using_lda_no_changes_doc(ddict, len(real_cat), D+test)
 
-    for i in D:
+    for i in test:
         print(clf(bpt(i), vocab, matrix))
 
 

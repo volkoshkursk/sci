@@ -112,6 +112,8 @@ class OnlineLDA:
         for word in vocab:
             word = word.lower()
             word = re.sub(r'[^a-z]', '', word)
+            if word in self._vocab.keys():
+                continue
             self._vocab[word] = len(self._vocab)
 
         self._K = K
