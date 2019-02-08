@@ -38,15 +38,19 @@ def get_real_cat(cat, D):
     return out
 
 
-def clf(obj, vocab_, matrix):
+def clf(obj, vocab_, matrix, num_of_themes, limit):
     (wordids, wordcts) = ldaO.parse_doc_list([obj], vocab_)  # TODO переписать костыль
     wordids = wordids[0]
     wordcts = wordcts[0]
-    score = [0 for _ in range(117)]  # TODO переписать костыль (количество тем должно загружаться автоматически)
+    score = [0 for _ in range(num_of_themes)]
     for i in range(len(wordids)):
-        for j in range(117):  # TODO переписать костыль (количество тем должно загружаться автоматически)
+        for j in range(num_of_themes):
             score[j] += matrix[wordids[i]][j] * wordcts[i]
-    return np.argmax(score)  # TODO сделать порог добавления темы
+    out = []
+    for i in range(len(score)):
+        if score[i] > limit:
+            out.append(i)
+    return out
 
 
 def bpt(x):
@@ -106,9 +110,22 @@ def main_lda():
     cursor.execute("select * from test where test." + groupname[num] + "!= 'None'  limit 10")
     test = decode_from_db(cursor.fetchall(), cat)
     (matrix, vocab) = using_lda_no_changes_doc(ddict, len(real_cat), D+test)
-
+    average = 0
+    for i in matrix:
+        for j in i:
+            average += j
+    average = average / (matrix.shape[0] * matrix.shape[1])
+    edu = []
+    for i in D:
+        edu.append(clf(bpt(i), vocab, matrix, average*100))
+    result = []
     for i in test:
-        print(clf(bpt(i), vocab, matrix))
+        result.append(clf(bpt(i), vocab, matrix, len(real_cat), average*100))
+    # возможно, есть способ лучше (устанавливаем соответствие между кодом темы и её названием)
+    for i in range(len(real_cat)):
+        pass
+    print(edu)
+    print(result)
 
 
 if __name__ == "__main__":
