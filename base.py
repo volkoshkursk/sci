@@ -434,7 +434,7 @@ def decode_from_db(arr, array_cat, cat_num=None):
         arr_news[len(arr_news) - 1].set_text_waste(decode(i[19]))
         arr_news[len(arr_news) - 1].set_body(decode(i[20]))
 
-        if cat_num != None:
+        if cat_num is not None:
             if arr_news[len(arr_news) - 1].title != None and arr_news[len(arr_news) - 1].body != None:
                 arr_for_c[0].append(arr_news[len(arr_news) - 1].title + arr_news[len(arr_news) - 1].body)
             elif arr_news[len(arr_news) - 1].title != None:
@@ -456,10 +456,10 @@ def decode_from_db(arr, array_cat, cat_num=None):
                 arr_for_c[1].append('|' + i[7] + '|')
             else:
                 arr_for_c[0].append('')
-    if cat_num == None:
+    if cat_num is None:
         return arr_news
     else:
-        return (arr_news, arr_for_c)
+        return arr_news, arr_for_c
 
 
 def main():

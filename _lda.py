@@ -1,5 +1,6 @@
 import lda.onlineldavb as ldaO
 import numpy as np
+import operator
 import re
 from base import *
 
@@ -117,13 +118,31 @@ def main_lda():
     average = average / (matrix.shape[0] * matrix.shape[1])
     edu = []
     for i in D:
-        edu.append(clf(bpt(i), vocab, matrix, average*100))
+        edu.append(clf(bpt(i), vocab, matrix, len(real_cat), average*100))
     result = []
     for i in test:
         result.append(clf(bpt(i), vocab, matrix, len(real_cat), average*100))
     # возможно, есть способ лучше (устанавливаем соответствие между кодом темы и её названием)
+    themes_as_num = [dict() for _ in range(len(real_cat))]
     for i in range(len(real_cat)):
-        pass
+        for j in range(len(edu)):
+            if i in edu[j]:
+                for theme in D[j].topics_array:
+                    if theme in themes_as_num[i].keys():
+                        themes_as_num[i][theme] += 1
+                    else:
+                        themes_as_num[i][theme] = 1
+    # теперь посчитаем распределение вероятностей названий тем по номерам кластеров
+    for i in range(len(themes_as_num)):
+        count = 0
+        for j in themes_as_num[i].keys():
+            count += themes_as_num[i][j]
+        for j in themes_as_num[i].keys():
+            themes_as_num[i][j] = themes_as_num[i][j]/count
+    # построим таблицу перевода из номера кластера в название темы
+    translate_table = []
+    for i in range(len(themes_as_num)):
+        translate_table.append(max(themes_as_num[i].items(), key=operator.itemgetter(1))[0])
     print(edu)
     print(result)
 
