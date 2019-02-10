@@ -142,9 +142,25 @@ def main_lda():
     # построим таблицу перевода из номера кластера в название темы
     translate_table = []
     for i in range(len(themes_as_num)):
-        translate_table.append(max(themes_as_num[i].items(), key=operator.itemgetter(1))[0])
-    print(edu)
-    print(result)
+        if len(themes_as_num[i]) == 0:
+            translate_table.append('None')
+        else:
+            translate_table.append(max(themes_as_num[i].items(), key=operator.itemgetter(1))[0])
+    # TODO переделать систему оценки
+    result_score = 0
+    for i in range(len(D)):
+        for theme in edu[i]:
+            if translate_table[theme] in D[i].topics_array:
+                result_score += 1
+    print(result_score/len(D))
+    result_score = 0
+    for i in range(len(test)):
+        for theme in result[i]:
+            if translate_table[theme] in test[i].topics_array:
+                result_score += 1
+    print(result_score/len(test))
+    # print(edu)
+    # print(result)
 
 
 if __name__ == "__main__":
