@@ -108,7 +108,7 @@ def main_lda():
         ddict.extend(i)
     D = decode_from_db(cursor.fetchall(), cat)
     real_cat = get_real_cat(cat[num], D)
-    cursor.execute("select * from test where test." + groupname[num] + "!= 'None'  limit 10")
+    cursor.execute("select * from test where test." + groupname[num] + "!= 'None'")
     test = decode_from_db(cursor.fetchall(), cat)
     (matrix, vocab) = using_lda_no_changes_doc(ddict, len(real_cat), D+test)
     average = 0
@@ -141,24 +141,50 @@ def main_lda():
             themes_as_num[i][j] = themes_as_num[i][j]/count
     # построим таблицу перевода из номера кластера в название темы
     translate_table = []
+
     for i in range(len(themes_as_num)):
         if len(themes_as_num[i]) == 0:
             translate_table.append('None')
         else:
             translate_table.append(max(themes_as_num[i].items(), key=operator.itemgetter(1))[0])
-    # TODO переделать систему оценки
+    # for i in range(len(themes_as_num)):
+    #     if len(themes_as_num[i]) == 0:
+    #         translate_table.append('None')
+    #     else:
+    #         translate_table.append(max([j if j[0] not in translate_table else (j[0], -float('inf')) for j in
+    #                                     themes_as_num[i].items()], key=operator.itemgetter(1))[0])
+
+    # узнаем названия классов
+    edu_new = []
+    for i in edu:
+        edu_new.append(set([translate_table[j] for j in i]))
+
+    # замер точности для обучающего множества
     result_score = 0
+    total_themes = 0
+    for i in D:
+        total_themes += len(i.topics_array)
     for i in range(len(D)):
-        for theme in edu[i]:
-            if translate_table[theme] in D[i].topics_array:
+        for theme in edu_new[i]:
+            if theme in D[i].topics_array:
                 result_score += 1
-    print(result_score/len(D))
+    print(result_score/total_themes)
+
+    # узнаем названия классов
+    result_new = []
+    for i in result:
+        result_new.append(set([translate_table[j] for j in i]))
+
+    # замер точности для тренировочного множества
     result_score = 0
+    total_themes = 0
+    for i in test:
+        total_themes += len(i.topics_array)
     for i in range(len(test)):
-        for theme in result[i]:
-            if translate_table[theme] in test[i].topics_array:
+        for theme in result_new[i]:
+            if theme in test[i].topics_array:
                 result_score += 1
-    print(result_score/len(test))
+    print(result_score/total_themes)
     # print(edu)
     # print(result)
 
