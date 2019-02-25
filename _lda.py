@@ -10,7 +10,6 @@ def encode_words(d, ddict):
     преобразует документы в наборы ид уникальных слов и их количества
     :param d: документ
     :param ddict: словарь
-    :param C: словарь по категориям
     :return: массив слов и их количеств
     """
     out = [list(), list()]
@@ -30,6 +29,12 @@ def encode_words(d, ddict):
 
 
 def get_real_cat(cat, D):
+    """
+    поиск категорий, которым соответсвует хоть один документ в D
+    :param cat: список категорий
+    :param D: список документов (элементы класса news)
+    :return: список непустых категоий
+    """
     out = []
     for x in cat:
         for i in D:
@@ -40,6 +45,15 @@ def get_real_cat(cat, D):
 
 
 def clf(obj, vocab_, matrix, num_of_themes, limit):
+    """
+    классификатор, основанный на кластеризации с помощью OnlineLDA
+    :param obj: исследуемый документ
+    :param vocab_: словарь из OnlineLDA
+    :param matrix: матрица лямбда, генерируемая OnlineLDA
+    :param num_of_themes: количество тем классификации
+    :param limit: порог принадлежности документа теме
+    :return:
+    """
     (wordids, wordcts) = ldaO.parse_doc_list([obj], vocab_)  # TODO переписать костыль
     wordids = wordids[0]
     wordcts = wordcts[0]
@@ -55,6 +69,11 @@ def clf(obj, vocab_, matrix, num_of_themes, limit):
 
 
 def bpt(x):
+    """
+    объединение заголовка и тела новости для документа класса news
+    :param x: элемент класса news
+    :return: объединение заголовка и тела новости
+    """
     if x.body is not None and x.title is not None:
         return x.body + x.title
     elif x.body is not None:
@@ -65,7 +84,14 @@ def bpt(x):
         return ''
 
 
-def using_lda_no_changes(vocab, K, D):
+def using_lda_no_changes(vocab, K, D):  # TODO не работает. Исправить
+    """
+    вызов расчёта лямбда в реализации Online LDA с разбиением на слова "здесь"
+    :param vocab: словарь (список)
+    :param K: количество категорий
+    :param D: коллекция документов (сисок)
+    :return: параметры модели: матрица лямбда
+    """
     model = ldaO.OnlineLDA(vocab, K, len(D),
                            0.1, 0.01, 1, 0.75)
     s = 10  # batch size
@@ -79,6 +105,13 @@ def using_lda_no_changes(vocab, K, D):
 
 
 def using_lda_no_changes_doc(vocab, K, D):
+    """
+    вызов расчёта лямбда в реализации Online LDA с разбиением на слова на стороне Online LDA
+    :param vocab: словарь (список)
+    :param K: количество категорий
+    :param D: коллекция документов (список)
+    :return: параметры модели: матрица лямбда и словарь (приведённый к типу для работы с Online LDA)
+    """
     model = ldaO.OnlineLDA(vocab, K, len(D),
                            0.1, 0.01, 1, 0.75)
     s = 9  # batch size
@@ -100,7 +133,7 @@ def main_lda():
     C = dict.fromkeys(cat[num])
     for i in cat[num]:
         cursor.execute(
-            "select word from " + groupname[num] + " where classname== '" + i + "' order by mi desc limit 10")
+            "select word from " + groupname[num] + " where classname== '" + i + "' order by mi desc limit 25")
         C[i] = list(map(lambda x: x[0], cursor.fetchall()))
     cursor.execute("select * from inp where inp." + groupname[num] + "!= 'None' ")
     ddict = []
