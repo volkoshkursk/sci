@@ -2,6 +2,7 @@ import lda.onlineldavb as ldaO
 import numpy as np
 import operator
 import re
+import math
 from base import *
 
 
@@ -101,30 +102,36 @@ def using_lda_no_changes(vocab, K, D):  # TODO не работает. Испра
         wordids = [d for d in docs[0][(i * s):((i + 1) * s)]]
         wordcts = [d for d in docs[1][(i * s):((i + 1) * s)]]
         model.update_lambda(wordids, wordcts)
-        np.savetxt('lambda' , model._lambda)
+        np.savetxt('lambda', model._lambda)
 
 
-def using_lda_no_changes_doc(vocab, K, D):
+def using_lda_no_changes_doc(vocab, K, D, alpha, eta, tau0, kappa):
     """
     вызов расчёта лямбда в реализации Online LDA с разбиением на слова на стороне Online LDA
     :param vocab: словарь (список)
     :param K: количество категорий
     :param D: коллекция документов (список)
+    :param alpha: параметр модели, по умолчанию равен 0.1, его описание см. в onlineldavb.py
+    :param eta: параметр модели, по умолчанию равен 0.01, его описание см. в onlineldavb.py
+    :param tau0: параметр модели, по умолчанию равен 1, его описание см. в onlineldavb.py
+    :param kappa: параметр модели, по умолчанию равен 0.75, его описание см. в onlineldavb.py
     :return: параметры модели: матрица лямбда и словарь (приведённый к типу для работы с Online LDA)
     """
-    model = ldaO.OnlineLDA(vocab, K, len(D),
-                           0.1, 0.01, 1, 0.75)
-    s = 9  # batch size
+    model = ldaO.OnlineLDA(vocab, K, len(D),alpha, eta, tau0, kappa)
+#                           0.1, 0.01, 1, 0.75)
+    s = math.floor(len(D)/1000)  # batch size
     docs = list(map(lambda x: bpt(x).translate(str.maketrans('\n', ' ')), D))
     for i in range(1000):
         print(i)
         d = [d for d in docs[(i * s):((i + 1) * s)]]
         model.update_lambda_docs(d)
+    d = [d for d in docs[((i + 1) * s):len(docs)]]
+    model.update_lambda_docs(d)
     # np.savetxt('lambda', model._lambda.T)
     return model._lambda.T, model._vocab
 
 
-def main_lda():
+def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25):
     conn = sqlite3.connect('collection_test_topics.db')
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
     cursor = conn.cursor()
@@ -133,7 +140,8 @@ def main_lda():
     C = dict.fromkeys(cat[num])
     for i in cat[num]:
         cursor.execute(
-            "select word from " + groupname[num] + " where classname== '" + i + "' order by mi desc limit 25")
+            "select word from " + groupname[num] +
+            " where classname== '" + i + "' order by mi desc limit " + str(num_words))
         C[i] = list(map(lambda x: x[0], cursor.fetchall()))
     cursor.execute("select * from inp where inp." + groupname[num] + "!= 'None' ")
     ddict = []
@@ -143,7 +151,9 @@ def main_lda():
     real_cat = get_real_cat(cat[num], D)
     cursor.execute("select * from test where test." + groupname[num] + "!= 'None'")
     test = decode_from_db(cursor.fetchall(), cat)
-    (matrix, vocab) = using_lda_no_changes_doc(ddict, len(real_cat), D+test)
+    cursor.execute("select * from inp ")
+    (matrix, vocab) = using_lda_no_changes_doc(ddict, len(real_cat), decode_from_db(cursor.fetchall(), cat),
+                                               alpha, eta, tau0, kappa)
     average = 0
     for i in matrix:
         for j in i:
@@ -151,10 +161,11 @@ def main_lda():
     average = average / (matrix.shape[0] * matrix.shape[1])
     edu = []
     for i in D:
-        edu.append(clf(bpt(i), vocab, matrix, len(real_cat), average*100))
+        edu.append(clf(bpt(i), vocab, matrix, len(real_cat), average * 100))
     result = []
     for i in test:
-        result.append(clf(bpt(i), vocab, matrix, len(real_cat), average*100))
+        result.append(clf(bpt(i), vocab, matrix, len(real_cat), average * 100))
+
     # возможно, есть способ лучше (устанавливаем соответствие между кодом темы и её названием)
     themes_as_num = [dict() for _ in range(len(real_cat))]
     for i in range(len(real_cat)):
@@ -165,13 +176,15 @@ def main_lda():
                         themes_as_num[i][theme] += 1
                     else:
                         themes_as_num[i][theme] = 1
+
     # теперь посчитаем распределение вероятностей названий тем по номерам кластеров
     for i in range(len(themes_as_num)):
         count = 0
         for j in themes_as_num[i].keys():
             count += themes_as_num[i][j]
         for j in themes_as_num[i].keys():
-            themes_as_num[i][j] = themes_as_num[i][j]/count
+            themes_as_num[i][j] = themes_as_num[i][j] / count
+
     # построим таблицу перевода из номера кластера в название темы
     translate_table = []
 
@@ -192,7 +205,7 @@ def main_lda():
     for i in edu:
         edu_new.append(set([translate_table[j] for j in i]))
 
-    # замер точности для обучающего множества
+    # замер точности для обучающего множества (micro)
     result_score = 0
     total_themes = 0
     for i in D:
@@ -201,14 +214,14 @@ def main_lda():
         for theme in edu_new[i]:
             if theme in D[i].topics_array:
                 result_score += 1
-    print(result_score/total_themes)
+    print(result_score / total_themes)
 
     # узнаем названия классов
     result_new = []
     for i in result:
         result_new.append(set([translate_table[j] for j in i]))
 
-    # замер точности для тренировочного множества
+    # замер точности для тренировочного множества (micro)
     result_score = 0
     total_themes = 0
     for i in test:
@@ -217,9 +230,38 @@ def main_lda():
         for theme in result_new[i]:
             if theme in test[i].topics_array:
                 result_score += 1
-    print(result_score/total_themes)
+    print(result_score / total_themes)
+    micro = result_score / total_themes
+
+    # замер точности для обучающего множества (macro)
+    result_score = 0
+    total_score = 0
+    average = 0
+    for current_theme in real_cat:
+        for i in range(len(D)):
+            if current_theme in D[i].topics_array:
+                total_score += 1
+                if current_theme in edu_new[i]:
+                    result_score += 1
+        average += result_score/total_score
+    print(average / len(real_cat))
+
+    # замер точности для тренировочного множества (macro)
+    result_score = 0
+    total_score = 0
+    average = 0
+    for current_theme in real_cat:
+        for i in range(len(test)):
+            if current_theme in test[i].topics_array:
+                total_score += 1
+                if current_theme in result_new[i]:
+                    result_score += 1
+        average += result_score/total_score
+    print(average / len(real_cat))
+    macro = average / len(real_cat)
     # print(edu)
     # print(result)
+    return micro, macro
 
 
 if __name__ == "__main__":
