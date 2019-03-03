@@ -131,7 +131,7 @@ def using_lda_no_changes_doc(vocab, K, D, alpha, eta, tau0, kappa):
     return model._lambda.T, model._vocab
 
 
-def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75):
+def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25):
     conn = sqlite3.connect('collection_test_topics.db')
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
     cursor = conn.cursor()
@@ -140,7 +140,8 @@ def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75):
     C = dict.fromkeys(cat[num])
     for i in cat[num]:
         cursor.execute(
-            "select word from " + groupname[num] + " where classname== '" + i + "' order by mi desc limit 25")
+            "select word from " + groupname[num] +
+            " where classname== '" + i + "' order by mi desc limit " + str(num_words))
         C[i] = list(map(lambda x: x[0], cursor.fetchall()))
     cursor.execute("select * from inp where inp." + groupname[num] + "!= 'None' ")
     ddict = []
@@ -204,7 +205,7 @@ def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75):
     for i in edu:
         edu_new.append(set([translate_table[j] for j in i]))
 
-    # замер точности для обучающего множества
+    # замер точности для обучающего множества (micro)
     result_score = 0
     total_themes = 0
     for i in D:
@@ -220,7 +221,7 @@ def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75):
     for i in result:
         result_new.append(set([translate_table[j] for j in i]))
 
-    # замер точности для тренировочного множества
+    # замер точности для тренировочного множества (micro)
     result_score = 0
     total_themes = 0
     for i in test:
@@ -231,10 +232,36 @@ def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75):
                 result_score += 1
     print(result_score / total_themes)
     micro = result_score / total_themes
+
+    # замер точности для обучающего множества (macro)
+    result_score = 0
+    total_score = 0
+    average = 0
+    for current_theme in real_cat:
+        for i in range(len(D)):
+            if current_theme in D[i].topics_array:
+                total_score += 1
+                if current_theme in edu_new[i]:
+                    result_score += 1
+        average += result_score/total_score
+    print(average / len(real_cat))
+
+    # замер точности для тренировочного множества (macro)
+    result_score = 0
+    total_score = 0
+    average = 0
+    for current_theme in real_cat:
+        for i in range(len(test)):
+            if current_theme in test[i].topics_array:
+                total_score += 1
+                if current_theme in result_new[i]:
+                    result_score += 1
+        average += result_score/total_score
+    print(average / len(real_cat))
+    macro = average / len(real_cat)
     # print(edu)
     # print(result)
-    return micro
-
+    return micro, macro
 
 
 if __name__ == "__main__":
