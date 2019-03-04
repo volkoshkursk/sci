@@ -250,6 +250,11 @@ def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25):
     result_score = 0
     total_score = 0
     average = 0
+    del real_cat
+    real_cat = set()
+    for i in test:
+        real_cat.update(set(i.topics_array))
+
     for current_theme in real_cat:
         for i in range(len(test)):
             if current_theme in test[i].topics_array:
