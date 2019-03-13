@@ -27,12 +27,12 @@ class news:
             self.csecs = csecs
         self.topics = topics
         self.date = None
-        self.topics_array = None
+        self.topics_array = []
         self.mknote = None
-        self.places = None
-        self.people = None
-        self.orgs = None
-        self.exchanges = None
+        self.places = []
+        self.people = []
+        self.orgs = []
+        self.exchanges = []
         self.companies = None
         self.unknown = None
         self.text_type = 'NORM'
