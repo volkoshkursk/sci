@@ -117,7 +117,7 @@ def using_lda_no_changes_doc(vocab, K, D, alpha, eta, tau0, kappa):
     :param kappa: параметр модели, по умолчанию равен 0.75, его описание см. в onlineldavb.py
     :return: параметры модели: матрица лямбда и словарь (приведённый к типу для работы с Online LDA)
     """
-    model = ldaO.OnlineLDA(vocab, K, len(D),alpha, eta, tau0, kappa)
+    model = ldaO.OnlineLDA(vocab, K, len(D), alpha, eta, tau0, kappa)
 #                           0.1, 0.01, 1, 0.75)
     s = math.floor(len(D)/1000)  # batch size
     docs = list(map(lambda x: bpt(x).translate(str.maketrans('\n', ' ')), D))
@@ -132,7 +132,7 @@ def using_lda_no_changes_doc(vocab, K, D, alpha, eta, tau0, kappa):
 
 
 def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25):
-    conn = sqlite3.connect('collection_test_topics.db')
+    conn = sqlite3.connect('collection.db')
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
     cursor = conn.cursor()
     num = 4
