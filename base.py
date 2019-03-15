@@ -211,7 +211,7 @@ def encode(inp):
     :param inp: текст
     :return: текст, без "запрещённых" символов
     """
-    if inp is None:
+    if inp is None or len(inp) == 0:
         return 'None'
     else:
         return str('"/"'.join(inp.split("'")))
@@ -223,7 +223,7 @@ def encode_arr(inp):
     :param inp: массив (список)
     :return: строка, закодированная для записи
     """
-    if inp is None:
+    if inp is None or len(inp) == 0:
         return 'None'
     else:
         return str('|'.join(inp))

@@ -58,13 +58,16 @@ def clf(obj, vocab_, matrix, num_of_themes, limit):
     (wordids, wordcts) = ldaO.parse_doc_list([obj], vocab_)  # TODO переписать костыль
     wordids = wordids[0]
     wordcts = wordcts[0]
+    len_of_obj = sum(wordcts)
+    out = []
+    if len_of_obj == 0:
+        return out
     score = [0 for _ in range(num_of_themes)]
     for i in range(len(wordids)):
         for j in range(num_of_themes):
             score[j] += matrix[wordids[i]][j] * wordcts[i]
-    out = []
     for i in range(len(score)):
-        if score[i] > limit:
+        if score[i]/len_of_obj > limit:
             out.append(i)
     return out
 
@@ -122,16 +125,16 @@ def using_lda_no_changes_doc(vocab, K, D, alpha, eta, tau0, kappa):
     s = math.floor(len(D)/1000)  # batch size
     docs = list(map(lambda x: bpt(x).translate(str.maketrans('\n', ' ')), D))
     for i in range(1000):
-        print(i)
+        # print(i)
         d = [d for d in docs[(i * s):((i + 1) * s)]]
         model.update_lambda_docs(d)
     d = [d for d in docs[((i + 1) * s):len(docs)]]
     model.update_lambda_docs(d)
-    # np.savetxt('lambda', model._lambda.T)
+    np.savetxt('new_lambda', model._lambda.T)
     return model._lambda.T, model._vocab
 
 
-def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25):
+def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25, len_real_cat=10):
     conn = sqlite3.connect('collection.db')
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
     cursor = conn.cursor()
@@ -152,7 +155,7 @@ def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25):
     cursor.execute("select * from test where test." + groupname[num] + "!= 'None'")
     test = decode_from_db(cursor.fetchall(), cat)
     cursor.execute("select * from inp ")
-    (matrix, vocab) = using_lda_no_changes_doc(ddict, len(real_cat), decode_from_db(cursor.fetchall(), cat),
+    (matrix, vocab) = using_lda_no_changes_doc(ddict, len_real_cat, decode_from_db(cursor.fetchall(), cat),
                                                alpha, eta, tau0, kappa)
     average = 0
     for i in matrix:
@@ -161,14 +164,14 @@ def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25):
     average = average / (matrix.shape[0] * matrix.shape[1])
     edu = []
     for i in D:
-        edu.append(clf(bpt(i), vocab, matrix, len(real_cat), average * 100))
+        edu.append(clf(bpt(i), vocab, matrix, len_real_cat, average))
     result = []
     for i in test:
-        result.append(clf(bpt(i), vocab, matrix, len(real_cat), average * 100))
+        result.append(clf(bpt(i), vocab, matrix, len_real_cat, average))
 
     # возможно, есть способ лучше (устанавливаем соответствие между кодом темы и её названием)
-    themes_as_num = [dict() for _ in range(len(real_cat))]
-    for i in range(len(real_cat)):
+    themes_as_num = [dict() for _ in range(len_real_cat)]
+    for i in range(len_real_cat):
         for j in range(len(edu)):
             if i in edu[j]:
                 for theme in D[j].topics_array:
@@ -204,7 +207,7 @@ def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25):
     edu_new = []
     for i in edu:
         edu_new.append(set([translate_table[j] for j in i]))
-
+    print(edu_new)
     # замер точности для обучающего множества (micro)
     result_score = 0
     total_themes = 0

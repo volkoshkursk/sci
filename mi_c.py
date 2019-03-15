@@ -76,7 +76,7 @@ def main_mi(num):
             collocations.add(body[j] + ' ' + body[j + 1])
         title = list()
         if i.title is not None:
-            title = encode_words(i.body.lower(i.title.lower()))
+            title = encode_words(i.title.lower())
         for j in range(len(title) - 1):
             collocations.add(title[j] + ' ' + title[j + 1])
         body += title
@@ -99,7 +99,8 @@ def main_mi(num):
 
 
 if __name__ == "__main__":
-    num = int(input('Ведите номер '))
+    # num = int(input('Ведите номер '))
+    num = 4
     main_mi(num)
 
 
@@ -110,7 +111,7 @@ def test():
     arr_cat = get_collection_categories('reuters21578.tar')
     cursor = conn.cursor()
     cursor.execute("select * from inp where inp.exchanges!='None'")
-    (all_arr, arr_c) = decode_from_db(cursor.fetchall(), get_collection_categories('reuters21578.tar'), 0)
+    (all_arr, arr_c) = decode_from_db(cursor.fetchall(), arr_cat, 0)
 
     array = (c_char_p * len(arr_c[0]))()
     array1 = (c_char_p * len(arr_c[1]))()
