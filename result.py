@@ -1,4 +1,4 @@
-f = open('result.txt')
+f = open('result_new.txt')
 n = 1
 a1 = []
 a2 = []
