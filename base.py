@@ -4,7 +4,6 @@ from ctypes import *
 from all_skips import *
 import os
 
-
 """
 базовая библиотека для проекта(описание класса + некоторые методы работы с sgml в sql базе данных)
 """
@@ -511,9 +510,7 @@ def decode_from_db(arr, array_cat, cat_num=None):
     :return: список декодированных объектов тиа news и (опционально) массив для фуекций на С
     """
     arr_news = []
-    arr_for_c = []
-    arr_for_c.append(list())
-    arr_for_c.append(list())
+    arr_for_c = [list(), list()]
     for i in arr:
         arr_news.append(news(i[5], i[2], i[3], i[0], i[1], i[4]))
         arr_news[len(arr_news) - 1].set_date(i[6])
@@ -560,6 +557,33 @@ def decode_from_db(arr, array_cat, cat_num=None):
         return arr_news, arr_for_c
 
 
+def generate_arr_for_c(arr_news, cat_num):
+    arr_for_c = [list(), list()]
+    for i in arr_news:
+        if i.title is not None and i.body is not None:
+            arr_for_c[0].append(i.title + i.body)
+        elif i.title is not None:
+            arr_for_c[0].append(i.title)
+        elif i.body is not None:
+            arr_for_c[0].append(i.body)
+        else:
+            arr_for_c[0].append('')
+
+        if cat_num == 0 and len(i.exchanges) != 0:
+            arr_for_c[1].append('|' + encode_arr(i.exchanges) + '|')
+        elif cat_num == 1 and len(i.orgs) != 0:
+            arr_for_c[1].append('|' + encode_arr(i.orgs) + '|')
+        elif cat_num == 2 and len(i.people) != 0:
+            arr_for_c[1].append('|' + encode_arr(i.people) + '|')
+        elif cat_num == 3 and len(i.places) != 0:
+            arr_for_c[1].append('|' + encode_arr(i.places) + '|')
+        elif cat_num == 4 and len(i.topics_array) != 0:
+            arr_for_c[1].append('|' + encode_arr(i.topics_array) + '|')
+        else:
+            raise Exception("Incorrect number of category's type")
+    return arr_for_c
+
+
 def main():
     a = []
     for i in range(10):
@@ -567,19 +591,21 @@ def main():
                       'collection.db')
 
     for i in range(10, 22):
-        #		print(i)
+        #       print(i)
         a += open_sgm('reuters21578.tar/reut2-0' + str(i) + '.sgm', get_collection_categories('reuters21578.tar'),
                       'collection.db')
-    #	a = open_sgm('reuters21578.tar/reut2-000.sgm', get_collection_categories('reuters21578.tar'), 'collection.db')
-    #	for i in a:
-    #		i.show()
+    #   a = open_sgm('reuters21578.tar/reut2-000.sgm', get_collection_categories('reuters21578.tar'), 'collection.db')
+    #   for i in a:
+    #       i.show()
     # ==============================================
     # создание словаря и поиск самого часто встречающегося слова
     body_dict = dict()
     for text in a:
+        body = ''
         if text.body is not None:
             body = text.body.lower().translate(str.maketrans(',:"',
-                                                             '   ')).split()  # получить тела, сделать все буквы строчными, заменить лишние символы пробелами и разделить на слова (по стандартному алгоритму)
+                                                             '   ')).split()  # получить тела, сделать все буквы
+            # строчными, заменить лишние символы пробелами и разделить на слова (по стандартному алгоритму)
         if text.title is not None:
             body += text.title.lower().translate(str.maketrans(',:"', '   ')).split()
         for i in body:
@@ -592,20 +618,118 @@ def main():
     print(body_dict[ans])
 
 
+def estimate(result, test):
+    """
+    замер точности (micro/macro, recall/precision)
+    :param result: результат рааботы классификатора на тестовом множестве
+    :param test: "правильные" ответы
+    :return: 4 оценки: micro recall, micro precision, macro recall, macro precision
+    """
+    # замер точности для тестового множества (macro)
+    # result_score = 0
+    # total_score = 0
+    # total_score_ = 0
+    # average = 0
+    # average_ = 0
+    # real_cat = set()
+    # for i in test:
+    #     real_cat.update(set(i.topics_array))
+    #
+    # for current_theme in real_cat:
+    #     for i in range(len(test)):
+    #         if current_theme in test[i].topics_array:
+    #             if current_theme in result[i]:
+    #                 result_score += 1
+    #             else:
+    #                 total_score += 1
+    #         elif current_theme in result[i]:
+    #             total_score_ += 1
+    #     average += result_score / (total_score + result_score)
+    #     if (total_score_ + result_score) != 0:
+    #         average_ += result_score / (total_score_ + result_score)
+    #     else:
+    #         average_ += 0
+    # macro_test_r = average / len(real_cat)
+    # macro_test_p = average_ / len(real_cat)
+    # замер точности для тестового множества (macro)
+    result_ = 0
+    result__ = 0
+    real_cat = set()
+    for i in test:
+        real_cat.update(set(i.topics_array))
+    for current_theme in real_cat:
+        tp = 0
+        fp = 0
+        fn = 0
+        for i in range(len(test)):
+            if current_theme in result[i]:
+                if current_theme in test[i].topics_array:
+                    tp += 1
+                else:
+                    fp += 1
+            else:
+                if current_theme not in result[i]:
+                    fn += 1
+        result_ += tp / (tp + fn)
+        if tp + fp > 0:
+            result__ += tp / (tp + fp)
+        else:
+            result__ = 0
+    macro_test_r = result_ / len(real_cat)
+    macro_test_p = result__ / len(real_cat)
+
+    # замер точности для тестового множества (micro)
+    tp = 0
+    # tn = 0
+    fp = 0
+    del real_cat
+    fn = 0
+    for i in range(len(test)):
+        for theme in result[i]:
+            if theme in test[i].topics_array:
+                tp += 1
+            else:
+                fp += 1
+        for theme in test[i].topics_array:
+            if theme not in result[i]:
+                fn += 1
+    if tp + fp != 0:
+        micro_test_p = tp / (tp + fp)
+    else:
+        micro_test_p = 0
+    micro_test_r = tp / (tp + fn)
+    return micro_test_p, micro_test_r, macro_test_p, macro_test_r
+
+
+def estimate_single(result, test):
+    """
+    оценка берётся только accuracy (я не знаю, как организовать подсчёт остальных, ибо в ответах > 1 категории,
+     а НБ генерирует исключительно одну)
+    :param result:
+    :param test:
+    :return:
+    """
+    plus = 0
+    for i in range(len(result)):
+        if result[i] in test[i].topics_array:
+            plus += 1
+    return plus / len(result)
+
+
 # ===============================================
 # for i in body_dict.keys():
-#	print(i)
+# print(i)
 # print('====================')
 # for i in range(len(a)):
-#	if a[i].newid != i + 1:
-#		print('====================')
-#		print(i)
-#		a[i].show()
+#    if a[i].newid != i + 1:
+#       print('====================')
+#       print(i)
+#       a[i].show()
 # print('====================')
 
 # for i in a:
-#	if i.text_type != 'NORM': 
-#		i.show()
+#   if i.text_type != 'NORM':
+#       i.show()
 # open_sgm('reuters21578.tar/lewis.dtd')
 if __name__ == '__main__':
     # main()

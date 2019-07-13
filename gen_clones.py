@@ -1,4 +1,21 @@
 from _lda import *
+import NB
+
+"""
+Cluster-Based Over Sampling
+"""
+
+
+def count_docs(cat, D):
+    themes = dict()
+    for x in cat:
+        for doc in D:
+            if x in doc.topics_array:
+                if themes.get(x) is None:
+                    themes[x] = 1
+                else:
+                    themes[x] += 1
+    return themes
 
 
 def sort_docs(cat, D):
@@ -26,99 +43,24 @@ def generate(theme, count):
     :param count: необходимое количество документов
     :return: список документов (элементы класса news)
     """
+    # if count > len(theme):
+    #     return theme * (count - len(theme))
+    # else:
+    #     return theme
     if count > len(theme):
-        return theme*(count - len(theme))
+        return theme * int((count-len(theme))/len(theme))
+        # clear_theme = []
+        # for i in theme:
+        #     if len(i.topics_array) == 1:
+        #         clear_theme.append(i)
+        # if len(clear_theme) > 0:
+        #     print('!')
+        #     return clear_theme * int((count-len(clear_theme))/len(clear_theme))
+        # else:
+        #     print('?')
+        #     return theme * int((count-len(theme))/len(theme))
     else:
-        return theme
-
-
-def online_lda_clf(ddict, D, all_docs, test):
-    """
-
-    :param ddict:
-    :param D:
-    :param all_docs:
-    :param test:
-    :return:
-    """
-    alpha=0.1
-    eta=0.01
-    tau0=1
-    kappa=0.75
-    len_real_cat=15
-    (matrix, vocab) = using_lda_no_changes_doc(ddict, len_real_cat, all_docs,
-                                               alpha, eta, tau0, kappa)
-    average = 0
-    for i in matrix:
-        for j in i:
-            average += j
-    average = average / (matrix.shape[0] * matrix.shape[1])
-
-    translate_table = translate(len_real_cat, D, vocab, matrix, average)
-    result = []
-    for i in test:
-        result.append(clf(bpt(i), vocab, matrix, len_real_cat, average))
-    # узнаем названия классов
-    result_new = []
-    for i in result:
-        result_new.append(set([translate_table[j] for j in i]))
-    return result_new
-
-
-def estimate(result, test):
-    """
-    замер точности (micro/macro, recall/precision)
-    :param result: результат рааботы классификатора на тестовом множестве
-    :param test: "правильные" ответы
-    :return: 4 оценки: micro recall, micro precision, macro recall, macro precision
-    """
-    # замер точности для тестового множества (macro)
-    result_score = 0
-    total_score = 0
-    total_score_ = 0
-    average = 0
-    average_ = 0
-    real_cat = set()
-    for i in test:
-        real_cat.update(set(i.topics_array))
-
-    for current_theme in real_cat:
-        for i in range(len(test)):
-            if current_theme in test[i].topics_array:
-                if current_theme in result[i]:
-                    result_score += 1
-                else:
-                    total_score += 1
-            elif current_theme in result[i]:
-                total_score_ += 1
-        average += result_score / (total_score + result_score)
-        if (total_score_ + result_score)!=0:
-            average_ += result_score / (total_score_ + result_score)
-        else:
-            average_ += 0
-    macro_test_r = average / len(real_cat)
-    macro_test_p = average_ / len(real_cat)
-
-    # замер точности для тестового множества (micro)
-    tp = 0
-    # tn = 0
-    fp = 0
-    fn = 0
-    for i in range(len(test)):
-        for theme in result[i]:
-            if theme in test[i].topics_array:
-                tp += 1
-            else:
-                fp += 1
-        for theme in test[i].topics_array:
-            if theme not in result[i]:
-                fn += 1
-    if tp + fp != 0:
-        micro_test_p = tp / (tp + fp)
-    else:
-        micro_test_p = 0
-    micro_test_r = tp / (tp + fn)
-    return micro_test_p, micro_test_r, macro_test_p, macro_test_r
+        return []
 
 
 def main_clones(num_words):
@@ -143,20 +85,39 @@ def main_clones(num_words):
     cursor.execute("select * from inp ")
     all_docs = decode_from_db(cursor.fetchall(), cat)
 
-    # создаём тестово множество
+    # создаём тестовое множество
     cursor.execute("select * from test where test." + groupname[num] + "!= 'None'")
     test = decode_from_db(cursor.fetchall(), cat)
 
     # классификатор на основе Online LDA (без балансировки)
     print(estimate(online_lda_clf(ddict, D, all_docs, test), test))
 
-    # балансируем
-    for i in themes.keys():
-        D += generate(themes[i], len(themes[i]))
+    # prior, condprob = NB_old.train(C, D, generate_arr_for_c(D, 4))
 
+    clf_1 = NB.naive_Bayes(C)
+    train = NB.convert_sgml(D)
+    clf_1.fit(train[0], train[1])
+    print(estimate_single(clf_1.predict(test), test))
+    # print(estimate_single([NB_old.use(C, prior, condprob, i) for i in test], test))
+    # длины классов до
+    print(sorted(count_docs(cat[num], D).items(), key=lambda kv: -kv[1]))
+
+    # балансируем
+    max_len = max(map(lambda x: len(x), themes.values()))
+    for i in themes.keys():
+        D += generate(themes[i], max_len/2)
+
+    # ... и после
+    print(sorted(count_docs(cat[num], D).items(), key=lambda kv: -kv[1]))
     # gen = generate(themes['corn'], 3987)
     # классификатор на основе Online LDA (после балансировки)
     print(estimate(online_lda_clf(ddict, D, all_docs, test), test))
+    # prior, condprob = NB_old.train(C, D, generate_arr_for_c(D, 4))
+    clf_2 = NB.naive_Bayes(C)
+    train = NB.convert_sgml(D)
+    clf_2.fit(train[0], train[1])
+    print(estimate_single(clf_1.predict(test), test))
+    # print(estimate_single([NB_old.use(C, prior, condprob, i) for i in test], test))
 
 
 if __name__ == '__main__':

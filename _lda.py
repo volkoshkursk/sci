@@ -183,6 +183,39 @@ def translate(len_real_cat, D, vocab, matrix, average):
     return translate_table
 
 
+def online_lda_clf(ddict, D, all_docs, test):
+    """
+    обучение и применение для тестового множества классификатора на основе Online LDA
+    :param ddict:
+    :param D:
+    :param all_docs:
+    :param test:
+    :return:
+    """
+    alpha = 0.1
+    eta = 0.01
+    tau0 = 1
+    kappa = 0.75
+    len_real_cat = 15
+    (matrix, vocab) = using_lda_no_changes_doc(ddict, len_real_cat, all_docs,
+                                               alpha, eta, tau0, kappa)
+    average = 0
+    for i in matrix:
+        for j in i:
+            average += j
+    average = average / (matrix.shape[0] * matrix.shape[1])
+
+    translate_table = translate(len_real_cat, D, vocab, matrix, average)
+    result = []
+    for i in test:
+        result.append(clf(bpt(i), vocab, matrix, len_real_cat, average))
+    # узнаем названия классов
+    result_new = []
+    for i in result:
+        result_new.append(set([translate_table[j] for j in i]))
+    return result_new
+
+
 def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=250, len_real_cat=15):
     conn = sqlite3.connect('collection.db')
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
