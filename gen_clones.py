@@ -48,7 +48,7 @@ def generate(theme, count):
     # else:
     #     return theme
     if count > len(theme):
-        return theme * int((count-len(theme))/len(theme))
+        return theme * int((count - len(theme)) / len(theme))
         # clear_theme = []
         # for i in theme:
         #     if len(i.topics_array) == 1:
@@ -103,9 +103,11 @@ def main_clones(num_words):
     print(sorted(count_docs(cat[num], D).items(), key=lambda kv: -kv[1]))
 
     # балансируем
+    # -----------------
     max_len = max(map(lambda x: len(x), themes.values()))
     for i in themes.keys():
-        D += generate(themes[i], max_len/2)
+        D += generate(themes[i], max_len / 2)
+    # -----------------
 
     # ... и после
     print(sorted(count_docs(cat[num], D).items(), key=lambda kv: -kv[1]))

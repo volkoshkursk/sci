@@ -673,8 +673,8 @@ def estimate(result, test):
         result_ += tp / (tp + fn)
         if tp + fp > 0:
             result__ += tp / (tp + fp)
-        else:
-            result__ = 0
+        # else:
+        #     result__ = 0
     macro_test_r = result_ / len(real_cat)
     macro_test_p = result__ / len(real_cat)
 

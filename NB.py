@@ -1,7 +1,8 @@
 import progressbar
 import numpy as np
 from collections import Counter
-import math, re
+import math
+import re
 import operator
 
 
@@ -35,10 +36,11 @@ def generate_boolean(y_, cond):
 
 
 class naive_Bayes:
-    def __init__(self, c):
+    def __init__(self, c, multi=True):
         self.c = c
         self.prior = None
         self.condprob = None
+        self.multi = multi
 
     def __get_w(self, i, j):
         a = self.condprob[i][j]
@@ -59,13 +61,19 @@ class naive_Bayes:
         widgets = [progressbar.Percentage(), progressbar.Bar()]
         bar = progressbar.ProgressBar(widgets=widgets, max_value=len(self.c.keys())).start()
         i_bar = 0
-        themes_count = Counter(custom_sum(y_))
+        if self.multi:
+            themes_count = Counter(custom_sum(y_))
+        else:
+            themes_count = Counter(y_)
         # считаем частоты появления тем
         for i in self.c.keys():
             self.prior.update(dict.fromkeys([i], themes_count[i] / n))
             # ----------------------------------------
             text = ''
-            text += ' '.join(np.array(x_)[generate_boolean(y_, lambda x: i in x)])  # собираем все тексты
+            if self.multi:
+                text += ' '.join(np.array(x_)[generate_boolean(y_, lambda x: i in x)])  # собираем все тексты
+            else:
+                text += ' '.join(np.array(x_)[generate_boolean(y_, lambda x: i == x)])  # собираем все тексты
             # из одной категории в один общий
             text = text.split(' ')
             # text = list(tuple(zip([''] + text, text)))
@@ -119,3 +127,47 @@ class naive_Bayes:
     # def get_params(self, deep=True):  # Сделано только что бы cross_val_score работал
     #     return dict()
 
+
+class MultipleNaiveBayes:
+    _list_of_NB = []
+
+    def __init__(self, c, cat):
+        self.cat = list(cat)
+        for _ in cat:
+            self._list_of_NB.append(naive_Bayes(c, False))
+
+    def fit(self, x_, y_):
+        if len(self._list_of_NB) == 0:
+            raise RuntimeError('Classifier has not been initialized')
+        if len(x_) != len(y_):
+            raise RuntimeError('Invalid arguments')
+
+        array_of_y = []
+        for i in range(len(self.cat)):
+            array_of_y.append(generate_boolean(y_, lambda x: self.cat[i] in x))
+
+        for i in range(len(self.cat)):
+            self._list_of_NB[i].fit(x_, array_of_y[i])
+
+    def use(self, d):
+        if len(self._list_of_NB) == 0:
+            raise RuntimeError('Classifier has not been initialized')
+        res = []
+        for i in range(len(self.cat)):
+            if self._list_of_NB[i].use(d) is True:
+                res.append(self.cat[i])
+        return res
+
+    def predict(self, arr):
+        return [self.use(i) for i in arr]
+
+    # def predict(self, arr):
+    #     if len(self.list_of_NB) == 0:
+    #         raise RuntimeError('Classifier has not been initialized')
+    #     res = []
+    #     for i in range(len(self.cat)):
+    #         temp_res = self.list_of_NB[i].use(arr)
+    #         for i in
+    #         if  is True:
+    #             res.append(self.cat[i])
+    #     return res
