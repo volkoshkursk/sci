@@ -55,7 +55,7 @@ class news:
             self.topics_array = topics
         elif not (set(topics).issubset(ctrl) or ((len(topics) == 1) and (topics[0] == ''))):
             print(topics)
-            raise breakedCollection
+            raise brokenCollection
 
     def set_mknote(self, mknote):
         if mknote != '':
@@ -72,7 +72,7 @@ class news:
             self.places = places
         elif not (set(places).issubset(ctrl) or ((len(places) == 1) and (places[0] == ''))):
             print(places)
-            raise breakedCollection
+            raise brokenCollection
 
     def set_orgs(self, orgs, ctrl):  # orgs - массив, ctrl - контрольное множество(set)
         """
@@ -85,7 +85,7 @@ class news:
             self.orgs = orgs
         elif not (set(orgs).issubset(ctrl) or ((len(orgs) == 1) and (orgs[0] == ''))):
             print(orgs)
-            raise breakedCollection
+            raise brokenCollection
 
     def set_people(self, people, ctrl):  # people - массив, ctrl - контрольное множество(set)
         """
@@ -98,7 +98,7 @@ class news:
             self.people = people
         elif not (set(people).issubset(ctrl) or ((len(people) == 1) and (people[0] == ''))):
             print(people)
-            raise breakedCollection
+            raise brokenCollection
 
     def set_exchanges(self, exchanges, ctrl):  # exchanges - массив, ctrl - контрольное множество(set)
         """
@@ -111,7 +111,7 @@ class news:
             self.exchanges = exchanges
         elif not (set(exchanges).issubset(ctrl) or ((len(exchanges) == 1) and (exchanges[0] == ''))):
             print(exchanges)
-            raise breakedCollection
+            raise brokenCollection
 
     def set_companies(self, companies):
         if len(companies) > 0 and companies != 'None':
@@ -252,16 +252,16 @@ def decode(inp):
         return str("'".join(inp.split('"/"')))
 
 
-def get_collection_categories(adress):
+def get_collection_categories(address):
     """
     загрузка имён категорий
-    :param adress: адрес директории с расакованным архивом
+    :param address: адрес директории с расакованным архивом
     :return: список имён категорий
     """
     out = []  # exchanges, orgs, people, places, topics
-    filenames = [adress + '/all-exchanges-strings.lc.txt', adress + '/all-orgs-strings.lc.txt',
-                 adress + '/all-people-strings.lc.txt', adress + '/all-places-strings.lc.txt',
-                 adress + '/all-topics-strings.lc.txt']
+    filenames = [address + '/all-exchanges-strings.lc.txt', address + '/all-orgs-strings.lc.txt',
+                 address + '/all-people-strings.lc.txt', address + '/all-places-strings.lc.txt',
+                 address + '/all-topics-strings.lc.txt']
     for i in range(len(filenames)):
         f = open(filenames[i], encoding='cp1252')
         out.append(set(map(lambda line: ''.join(''.join(line.split('\n')).split(' ')), f)))

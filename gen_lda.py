@@ -4,7 +4,7 @@ import NB
 import random
 
 
-def balance_lda(ddict, all_docs, theme, D):
+def balance_lda(ddict, all_docs, theme, D, cat):
     """
 
     :param D:
@@ -63,9 +63,22 @@ def balance_lda(ddict, all_docs, theme, D):
     #     result_index += random.sample(list(vocab_index)[0:100], 10)
     inversed_vocab = {value: key for key, value in vocab.items()}
 
-    result = [inversed_vocab[i] for i in result_index]
+    # result = [inversed_vocab[i] for i in result_index]
 
+    result = news('YES', 'TRAIN', 'TRAINING-SET', 0, 0, None)
+    result.set_body([inversed_vocab[i] for i in result_index])
+    result.set_topics([theme], cat)
     return result
+
+
+def run(D, cat, num, max_len, ddict, all_docs):
+    min_el = min(sort_docs(cat[num], D).items(), key=lambda x: len(x[1]))
+    while len(min_el[1]) < max_len:
+        D += balance_lda(ddict, all_docs, min_el[0], D)
+        min_el = min(sort_docs(cat[num], D).items(), key=lambda x: len(x[1]))
+        print('@', end=' ')
+    print('end')
+    return D
 
 
 def main_lda_themes(num_words):
@@ -102,7 +115,7 @@ def main_lda_themes(num_words):
     clf_1 = NB.naive_Bayes(C)
     train = NB.convert_sgml(D)
     clf_1.fit(train[0], train[1])
-    print('Наивный Байесовский классификатор (после):', end=' ')
+    print('Наивный Байесовский классификатор (до):', end=' ')
     print(estimate_single(clf_1.predict(test), test))
 
     # -----------------
@@ -113,12 +126,7 @@ def main_lda_themes(num_words):
     # балансируем
     # -----------------
     max_len = max(map(lambda x: len(x), sort_docs(cat[num], D).values()))
-    min_el = min(sort_docs(cat[num], D).items(), key=lambda x: len(x[1]))
-    while len(min_el[1]) < max_len:
-        D += balance_lda(ddict, all_docs, min_el[0], D)
-        min_el = min(sort_docs(cat[num], D).items(), key=lambda x: len(x[1]))
-        print('@', end='')
-    print('end')
+    D = run(D, cat, num, max_len, ddict, all_docs)
     # -----------------
     print('длины классов после:', end=' ')
     print(sorted(count_docs(cat[num], D).items(), key=lambda kv: -kv[1]))

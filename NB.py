@@ -63,10 +63,12 @@ class naive_Bayes:
         i_bar = 0
         if self.multi:
             themes_count = Counter(custom_sum(y_))
+            themes_list = self.c.keys()
         else:
             themes_count = Counter(y_)
+            themes_list = [True, False]
         # считаем частоты появления тем
-        for i in self.c.keys():
+        for i in themes_list:
             self.prior.update(dict.fromkeys([i], themes_count[i] / n))
             # ----------------------------------------
             text = ''
@@ -114,7 +116,11 @@ class naive_Bayes:
             if i in v:
                 w.append(i)
         score = dict()
-        for i in self.c.keys():
+        if self.multi:
+            themes_list = self.c.keys()
+        else:
+            themes_list = [True, False]
+        for i in themes_list:
             if self.prior[i] > 0:
                 score.update(dict.fromkeys([i], (math.log(self.prior[i]))))
                 for j in w:

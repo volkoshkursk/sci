@@ -63,6 +63,13 @@ def generate(theme, count):
         return []
 
 
+def run(D, cat, num, max_len, ddict, all_docs):
+    themes = dict(sorted(sort_docs(cat[num], D).items(), key=lambda kv: -len(kv[1])))
+    for i in themes.keys():
+        D += generate(themes[i], max_len / 2)
+    return D
+
+
 def main_clones(num_words):
     conn = sqlite3.connect('collection_full.db')
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
@@ -80,7 +87,7 @@ def main_clones(num_words):
     for i in list(C.values()):
         ddict.extend(i)
     D = decode_from_db(cursor.fetchall(), cat)
-    themes = dict(sorted(sort_docs(cat[num], D).items(), key=lambda kv: -len(kv[1])))
+    # themes = dict(sorted(sort_docs(cat[num], D).items(), key=lambda kv: -len(kv[1])))
 
     cursor.execute("select * from inp ")
     all_docs = decode_from_db(cursor.fetchall(), cat)
@@ -104,9 +111,9 @@ def main_clones(num_words):
 
     # балансируем
     # -----------------
-    max_len = max(map(lambda x: len(x), themes.values()))
-    for i in themes.keys():
-        D += generate(themes[i], max_len / 2)
+    max_len = max(map(lambda x: len(x), sort_docs(cat[num], D).values()))
+    D = run(D, cat, num, max_len, ddict, all_docs)
+
     # -----------------
 
     # ... и после

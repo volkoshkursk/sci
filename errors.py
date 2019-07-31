@@ -8,6 +8,6 @@ class NoSGM(Error):
 	pass
 
 
-class breakedCollection(Error):
+class brokenCollection(Error):
 	"""Raised when the input data does not correspond declaration"""
 	pass
