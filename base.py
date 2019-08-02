@@ -1,6 +1,7 @@
 from errors import *
 import sqlite3
 from ctypes import *
+import progressbar
 from all_skips import *
 import os
 
@@ -337,7 +338,7 @@ def open_sgm(filename, array_cat, database=None):
     out = []
     unknown_act = False
     unknown = ''
-    body = ''
+    # body = ''
     body_act = False
     title_act = False
     text_act = False
@@ -450,7 +451,7 @@ def open_sgm(filename, array_cat, database=None):
                                                                                  out[len(out) - 1])
         elif line[0:10] == '</REUTERS>':
             if database is not None:
-                command = "INSERT into inp values (" + out[len(out) - 1].generate_string() + ") "
+                command = "INSERT into all_data values (" + out[len(out) - 1].generate_string() + ") "
                 try:
                     cursor.execute(command)
                 except sqlite3.DatabaseError as e:
@@ -586,36 +587,41 @@ def generate_arr_for_c(arr_news, cat_num):
 
 def main():
     a = []
+    widgets = [progressbar.Percentage(), progressbar.Bar()]
+    bar = progressbar.ProgressBar(widgets=widgets, max_value=22).start()
     for i in range(10):
+        bar.update(i)
         a += open_sgm('reuters21578.tar/reut2-00' + str(i) + '.sgm', get_collection_categories('reuters21578.tar'),
                       'collection.db')
 
     for i in range(10, 22):
+        bar.update(i)
         #       print(i)
         a += open_sgm('reuters21578.tar/reut2-0' + str(i) + '.sgm', get_collection_categories('reuters21578.tar'),
                       'collection.db')
+    bar.finish()
     #   a = open_sgm('reuters21578.tar/reut2-000.sgm', get_collection_categories('reuters21578.tar'), 'collection.db')
     #   for i in a:
     #       i.show()
     # ==============================================
     # создание словаря и поиск самого часто встречающегося слова
-    body_dict = dict()
-    for text in a:
-        body = ''
-        if text.body is not None:
-            body = text.body.lower().translate(str.maketrans(',:"',
-                                                             '   ')).split()  # получить тела, сделать все буквы
-            # строчными, заменить лишние символы пробелами и разделить на слова (по стандартному алгоритму)
-        if text.title is not None:
-            body += text.title.lower().translate(str.maketrans(',:"', '   ')).split()
-        for i in body:
-            if body_dict.get(i) is None:
-                body_dict[i] = 1
-            else:
-                body_dict[i] += 1
-    ans = max(body_dict, key=(lambda key: body_dict[key]))
-    print(ans, end=' ')
-    print(body_dict[ans])
+    # body_dict = dict()
+    # for text in a:
+    #     body = ''
+    #     if text.body is not None:
+    #         body = text.body.lower().translate(str.maketrans(',:"',
+    #                                                          '   ')).split()  # получить тела, сделать все буквы
+    #         # строчными, заменить лишние символы пробелами и разделить на слова (по стандартному алгоритму)
+    #     if text.title is not None:
+    #         body += text.title.lower().translate(str.maketrans(',:"', '   ')).split()
+    #     for i in body:
+    #         if body_dict.get(i) is None:
+    #             body_dict[i] = 1
+    #         else:
+    #             body_dict[i] += 1
+    # ans = max(body_dict, key=(lambda key: body_dict[key]))
+    # print(ans, end=' ')
+    # print(body_dict[ans])
 
 
 def estimate(result, test):
@@ -732,6 +738,6 @@ def estimate_single(result, test):
 #       i.show()
 # open_sgm('reuters21578.tar/lewis.dtd')
 if __name__ == '__main__':
-    # main()
-    a = open_sgm('reuters21578.tar/reut2-000.sgm', get_collection_categories('reuters21578.tar'))
-    print(a[0].generate_string())
+    main()
+    # a = open_sgm('reuters21578.tar/reut2-000.sgm', get_collection_categories('reuters21578.tar'))
+    # print(a[0].generate_string())

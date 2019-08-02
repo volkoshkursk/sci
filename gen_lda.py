@@ -7,11 +7,11 @@ import random
 def balance_lda(ddict, all_docs, theme, D, cat):
     """
 
+    :param cat:
     :param D:
     :param ddict:
     :param all_docs:
     :param theme:
-    :param count: сколько добавить
     :return:
     """
     alpha = 0.1

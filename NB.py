@@ -58,9 +58,10 @@ class naive_Bayes:
         [v.update(set(x)) for x in self.c.values()]  # словарь
         self.prior = dict()
         self.condprob = dict()
-        widgets = [progressbar.Percentage(), progressbar.Bar()]
-        bar = progressbar.ProgressBar(widgets=widgets, max_value=len(self.c.keys())).start()
-        i_bar = 0
+        if self.multi:
+            widgets = [progressbar.Percentage(), progressbar.Bar()]
+            bar = progressbar.ProgressBar(widgets=widgets, max_value=len(self.c.keys())).start()
+            i_bar = 0
         if self.multi:
             themes_count = Counter(custom_sum(y_))
             themes_list = self.c.keys()
@@ -90,9 +91,11 @@ class naive_Bayes:
             for x in v:
                 self.condprob[i].update(
                     dict.fromkeys([x], ((word_count[x] + 1) / all_)))  # вероятность каждого слова в каждой теме
-            bar.update(i_bar)
-            i_bar += 1
-        bar.finish()
+            if self.multi:
+                bar.update(i_bar)
+                i_bar += 1
+        if self.multi:
+            bar.finish()
 
     def use(self, d):
         if self.prior is None:
@@ -152,8 +155,12 @@ class MultipleNaiveBayes:
         for i in range(len(self.cat)):
             array_of_y.append(generate_boolean(y_, lambda x: self.cat[i] in x))
 
+        widgets = [progressbar.Percentage(), progressbar.Bar()]
+        bar = progressbar.ProgressBar(widgets=widgets, max_value=len(self.cat)).start()
         for i in range(len(self.cat)):
+            bar.update(i)
             self._list_of_NB[i].fit(x_, array_of_y[i])
+        bar.finish()
 
     def use(self, d):
         if len(self._list_of_NB) == 0:
