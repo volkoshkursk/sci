@@ -1,27 +1,18 @@
 from base import *
 import progressbar
+import argparse
 import re
 
 
-# def create(classname, arr, cursor, conn, groupname):
-#	if len(arr) == 0:
-#		return
-#	for i in arr:
-#		command = "INSERT into" + groupname + "values ("+ "'" + classname +"','" + i[0] + "','" + str(i[1]) + "'); \n"
-#		try:
-#			cursor.execute(command)
-#		except sqlite3.DatabaseError as e:
-#			print(e)
-#			print(command)
-#			print('===============================\n==============================')
-#		else:
-#			conn.commit()
-
-def create(classname, arr, cursor, conn, groupname):
+def create(classname, arr, cursor, conn, groupname, collocations=False):
     if len(arr) == 0:
         return
-    command = "INSERT into " + groupname + " values (" + "'" + classname + "','" + arr[0] + "','" + str(
-        arr[1]) + "'); \n"
+    if collocations:
+        command = "INSERT into " + groupname + " values (" + "'" + classname + "','" + arr[0] + "','" + str(
+            arr[1]) + "'); \n"
+    else:
+        command = "INSERT into collocation_" + groupname + " values (" + "'" + classname + "','" + arr[0] + "','" + str(
+            arr[1]) + "'); \n"
     try:
         cursor.execute(command)
     except sqlite3.DatabaseError as e:
@@ -46,16 +37,16 @@ def encode_words(d):
     return out
 
 
-def main_mi(num):
+def main_mi(num, path):
     libname = os.path.abspath(os.path.join(os.path.dirname(__file__), "libmi.so"))
     mi = CDLL(libname)
-    conn = sqlite3.connect('collection.db')
+    conn = sqlite3.connect(path)
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
 
     arr_cat = get_collection_categories('reuters21578.tar')
     cursor = conn.cursor()
     cursor.execute("select * from inp where inp." + groupname[num] + "!='None'")
-    conn.commit()
+    # conn.commit()
     (all_arr, arr_c) = decode_from_db(cursor.fetchall(), get_collection_categories('reuters21578.tar'), num)
 
     # кодирование массива текстов новостей для С-функции
@@ -72,14 +63,16 @@ def main_mi(num):
         if i.body is not None:
             body = encode_words(i.body.lower())  # получить тела, сделать все буквы строчными, заменить
         # лишние символы пробелами и разделить на слова (по стандартному алгоритму)
-        for j in range(len(body) - 1):
-            collocations.add(body[j] + ' ' + body[j + 1])
+        # for j in range(len(body) - 1):
+        #     collocations.add(body[j] + ' ' + body[j + 1])
         title = list()
         if i.title is not None:
             title = encode_words(i.title.lower())
-        for j in range(len(title) - 1):
-            collocations.add(title[j] + ' ' + title[j + 1])
+        # for j in range(len(title) - 1):
+        #     collocations.add(title[j] + ' ' + title[j + 1])
         body += title
+        for j in range(len(body) - 1):
+            collocations.add(body[j] + ' ' + body[j + 1])
         words.update(set(body))
     widgets = [progressbar.Percentage(), progressbar.Bar()]
     mi.mi.restype = c_double
@@ -89,11 +82,13 @@ def main_mi(num):
         for j in words:
             mi_v = mi.mi(array, len(all_arr), create_string_buffer(str.encode('|' + arr[i] + '|')), array1,
                          create_string_buffer(str.encode(j)))
-            #			print(mi_v)
             if mi_v != -1:
-                #				class_arr.append((j,mi_v))
                 create(arr[i], (j, mi_v), cursor, conn, groupname[num])
-        #		create(arr[i], class_arr, cursor, conn)
+        for j in collocations:
+            mi_v = mi.mi(array, len(all_arr), create_string_buffer(str.encode('|' + arr[i] + '|')), array1,
+                         create_string_buffer(str.encode(j)))
+            if mi_v != -1:
+                create(arr[i], (j, mi_v), cursor, conn, groupname[num], True)
         bar.update(i)
     bar.finish()
 
@@ -101,10 +96,14 @@ def main_mi(num):
 if __name__ == "__main__":
     # num = int(input('Ведите номер '))
     num = 4
-    main_mi(num)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('path', type=str, help='Path to db')
+    arg = parser.parse_args()
+    main_mi(num, arg.path)
 
 
 def test():
+
     mi = CDLL('libmi.so')
     conn = sqlite3.connect('collection.db')
 

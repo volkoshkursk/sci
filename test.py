@@ -1,5 +1,4 @@
 from _lda import *
-from gen_clones import sort_docs, count_docs
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl

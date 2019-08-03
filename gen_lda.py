@@ -1,5 +1,4 @@
 from _lda import *
-from gen_clones import sort_docs, count_docs
 import NB
 import random
 

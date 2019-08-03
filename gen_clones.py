@@ -6,36 +6,6 @@ Cluster-Based Over Sampling
 """
 
 
-def count_docs(cat, D):
-    themes = dict()
-    for x in cat:
-        for doc in D:
-            if x in doc.topics_array:
-                if themes.get(x) is None:
-                    themes[x] = 1
-                else:
-                    themes[x] += 1
-    return themes
-
-
-def sort_docs(cat, D):
-    """
-    сортировка документов по категориям
-    :param cat: список категорий
-    :param D: список документов (элементы класса news)
-    :return: словарь категорий, в кач-ве значений - документы соответствующей категории
-    """
-    themes = dict()
-    for x in cat:
-        for doc in D:
-            if x in doc.topics_array:
-                if themes.get(x) is None:
-                    themes[x] = [doc]
-                else:
-                    themes[x] += [doc]
-    return themes
-
-
 def generate(theme, count):
     """
     генерация нового обучающего множества
