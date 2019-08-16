@@ -253,21 +253,49 @@ def decode(inp):
         return str("'".join(inp.split('"/"')))
 
 
-def get_collection_categories(address):
+def get_collection_categories(address, specific=None):
     """
     загрузка имён категорий
+    :param specific: Загрузка ограниченного числа категорий. Возможны значения None (default), 't10', 't15'
     :param address: адрес директории с расакованным архивом
     :return: список имён категорий
     """
     out = []  # exchanges, orgs, people, places, topics
     filenames = [address + '/all-exchanges-strings.lc.txt', address + '/all-orgs-strings.lc.txt',
-                 address + '/all-people-strings.lc.txt', address + '/all-places-strings.lc.txt',
-                 address + '/all-topics-strings.lc.txt']
+                     address + '/all-people-strings.lc.txt', address + '/all-places-strings.lc.txt',
+                     address + '/all-topics-strings.lc.txt']
+
+    # if specific is None:
+    #     filenames = [address + '/all-exchanges-strings.lc.txt', address + '/all-orgs-strings.lc.txt',
+    #                  address + '/all-people-strings.lc.txt', address + '/all-places-strings.lc.txt',
+    #                  address + '/all-topics-strings.lc.txt']
+    # elif specific == 't10':
+    #     filenames = [address + '/all-exchanges-strings.lc.txt', address + '/all-orgs-strings.lc.txt',
+    #                  address + '/all-people-strings.lc.txt', address + '/all-places-strings.lc.txt',
+    #                  address + '/10-topics-strings.lc.txt']
+    # elif specific == 't15':
+    #     filenames = [address + '/all-exchanges-strings.lc.txt', address + '/all-orgs-strings.lc.txt',
+    #                  address + '/all-people-strings.lc.txt', address + '/all-places-strings.lc.txt',
+    #                  address + '/15-topics-strings.lc.txt']
+    # else:
+    #     raise RuntimeError('incorrect parameter ' + str(specific))
+
     for i in range(len(filenames)):
         f = open(filenames[i], encoding='cp1252')
         out.append(set(map(lambda line: ''.join(''.join(line.split('\n')).split(' ')), f)))
         # 		print(f.split('\n'))
         f.close()
+    if specific == 't10':
+        f = open(address + '/10-topics-strings.lc.txt', encoding='cp1252')
+        spec = set(map(lambda line: ''.join(''.join(line.split('\n')).split(' ')), f))
+        f.close()
+        return out, spec
+    elif specific == 't15':
+        f = open(address + '/15-topics-strings.lc.txt', encoding='cp1252')
+        spec = set(map(lambda line: ''.join(''.join(line.split('\n')).split(' ')), f))
+        f.close()
+        return out, spec
+
     return out
 
 

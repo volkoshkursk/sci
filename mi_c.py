@@ -19,8 +19,8 @@ def create(classname, arr, cursor, conn, groupname, collocations=False):
         print(e)
         print(command)
         print('===============================\n==============================')
-    else:
-        conn.commit()
+    # else:
+    #     conn.commit()
 
 
 def encode_words(d):
@@ -84,11 +84,13 @@ def main_mi(num, path):
                          create_string_buffer(str.encode(j)))
             if mi_v != -1:
                 create(arr[i], (j, mi_v), cursor, conn, groupname[num])
+            conn.commit()
         for j in collocations:
             mi_v = mi.mi(array, len(all_arr), create_string_buffer(str.encode('|' + arr[i] + '|')), array1,
                          create_string_buffer(str.encode(j)))
             if mi_v != -1:
                 create(arr[i], (j, mi_v), cursor, conn, groupname[num], True)
+            conn.commit()
         bar.update(i)
     bar.finish()
 

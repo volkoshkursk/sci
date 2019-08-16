@@ -5,15 +5,16 @@ import matplotlib as mpl
 import NB
 
 from gen_lda import balance_lda
+# from gen_clones import generate
 
-n = 10
+n = 100
 
 # widgets = [NB.progressbar.Percentage(), NB.progressbar.Bar()]
 # bar = NB.progressbar.ProgressBar(widgets=widgets, max_value=n).start()
 
 
 def visualisation(arr):
-    for iteration in range(len(arr)):
+    for iteration in range(0, len(arr), 10):
         arr[iteration] = sorted(arr[iteration], key=lambda kv: -kv[1])
         x = []
         y = []
@@ -33,6 +34,7 @@ def visualisation(arr):
         fig.savefig('pic/' + str(iteration) + '.png')
         # plt.show()
         plt.clf()
+        del fig
 
 
 def save(*args):
@@ -45,14 +47,16 @@ def save(*args):
 
 
 if __name__ == '__main__':
-    num_words = 1
-    conn = sqlite3.connect('collection_full.db')
+    num_words = 10
+    conn = sqlite3.connect('collection_10.db')
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
     cursor = conn.cursor()
     num = 4
-    cat = get_collection_categories('reuters21578.tar')
-    C = dict.fromkeys(cat[num])
-    for i in cat[num]:
+    cat, spec = get_collection_categories('reuters21578.tar', 't10')
+    # для коллекции из 10 - это 10 тем
+    # C = dict.fromkeys(cat[num])
+    C = dict()
+    for i in spec:
         cursor.execute(
             "select word from " + groupname[num] +
             " where classname== '" + i + "' order by mi desc limit " + str(num_words))
@@ -79,27 +83,33 @@ if __name__ == '__main__':
     for i in range(n):
         print(i)
         # bar.update(i)
+        train = NB.convert_sgml(D)
         print('NB single')
         clf_1 = NB.naive_Bayes(C)
-        train = NB.convert_sgml(D)
         clf_1.fit(train[0], train[1])
-        # print('NB multi')
-        # clf_2 = NB.MultipleNaiveBayes(C, cat[4])
-        # clf_2.fit(train[0], train[1])
-        # # clf_2_arr.append(sum(estimate(clf_2.predict(test), test))/4)
-        # clf_2_arr.append(estimate(clf_2.predict(test), test))
+        print('NB multi')
+        clf_2 = NB.MultipleNaiveBayes(C, spec)
+        clf_2.fit(train[0], train[1])
+        # clf_2_arr.append(sum(estimate(clf_2.predict(test), test))/4)
+        temp = estimate(clf_2.predict(test), test)
+        for j in range(4):
+            clf_2_arr[j].append(temp[j])
+
         clf_arr.append(estimate_single(clf_1.predict(test), test))
         print('LDA')
         # lda_arr.append(sum(estimate(online_lda_clf(ddict, D, all_docs, test), test))/4)
+
         temp = estimate(online_lda_clf(ddict, D, all_docs, test), test)
-        for i in range(4):
-            lda_arr[i].append(temp[i])
+
+        for j in range(4):
+            lda_arr[j].append(temp[j])
         classes.append(count_docs(cat[num], D).items())
 
         min_el = min(sort_docs(cat[num], D).items(), key=lambda x: len(x[1]))
         # del clf_1, train
         print('Update')
         D.append(balance_lda(ddict, all_docs, min_el[0], D, cat[num]))
+        # D += generate(min_el[0], 1)
 
     # bar.finish()
 
@@ -109,15 +119,16 @@ if __name__ == '__main__':
     plt.clf()
     # plt.plot(lda_arr)
     # plt.savefig('pic/lda.png', format='png', dpi=100)
+    for i in range(len(clf_2_arr[0])):
+        plt.plot(clf_2_arr[i], label=str(i))
+        plt.savefig('pic/MultiNB_' + str(i) + '.png', format='png', dpi=100)
+        plt.clf()
+    plt.clf()
     for i in range(len(lda_arr)):
         plt.plot(lda_arr[i], label=str(i))
         plt.savefig('pic/lda_' + str(i) + '.png', format='png', dpi=100)
         plt.clf()
     # plt.show()
-    for i in range(len(clf_2_arr[0])):
-        plt.plot(clf_2_arr[i], label=str(i))
-        plt.savefig('pic/MultiNB_' + str(i) + '.png', format='png', dpi=100)
-        plt.clf()
     visualisation(classes)
     # # plt.show()
     # plt.clf()
