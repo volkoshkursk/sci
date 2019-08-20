@@ -1,5 +1,6 @@
 from _lda import *
 import NB
+import random
 
 """
 Cluster-Based Over Sampling
@@ -30,7 +31,8 @@ def generate(theme, count):
         #     print('?')
         #     return theme * int((count-len(theme))/len(theme))
     else:
-        return []
+        return random.sample(theme, count)
+        # return []
 
 
 def run(D, cat, num, max_len, ddict, all_docs):

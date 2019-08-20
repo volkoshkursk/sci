@@ -29,7 +29,7 @@ def balance_lda(ddict, all_docs, theme, D, cat):
 
     translate_table = translate(len_real_cat, D, vocab, matrix, average)
 
-    lda_index = []
+    lda_index = []  # список тем, созданных LDA, соответсвующих заданной теме Reuters
     start = 0
     while start < len(translate_table):
         if theme in translate_table[start:]:
@@ -39,17 +39,17 @@ def balance_lda(ddict, all_docs, theme, D, cat):
         else:
             del start
             break
-    # vocab_index = dict()
-    # for x in lda_index:
-    #     vocab_index.update(dict(enumerate(matrix[:, x])))
-    # vocab_index = dict(sorted(vocab_index.items(), key=lambda kv: -kv))
-
-    # реализация как у Камалова
-    # =========================
-    result_index = []
+    vocab_index = dict()
     for x in lda_index:
         vocab_index = dict(sorted(dict(enumerate(matrix[:, x])).items(), key=lambda kv: -kv[1]))
-        result_index += random.sample(list(vocab_index)[0:100], 10)
+
+    # реализация как у Камалова
+    # DONE: Можно попытаться взять то, что закомментировано и генерировать новые топики по какому-нибудь распределению
+    # =========================
+    # result_index = []
+    # for x in lda_index:
+    #     vocab_index = dict(sorted(dict(enumerate(matrix[:, x])).items(), key=lambda kv: -kv[1]))
+    #     result_index += random.sample(list(vocab_index)[0:100], 10)
     # =========================
 
     # vocab_index = dict(sorted(dict(enumerate(matrix[:, lda_index])).items(), key=lambda kv: -kv[1]))

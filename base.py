@@ -257,7 +257,7 @@ def get_collection_categories(address, specific=None):
     """
     загрузка имён категорий
     :param specific: Загрузка ограниченного числа категорий. Возможны значения None (default), 't10', 't15'
-    :param address: адрес директории с расакованным архивом
+    :param address: адрес директории с распакованным архивом
     :return: список имён категорий
     """
     out = []  # exchanges, orgs, people, places, topics

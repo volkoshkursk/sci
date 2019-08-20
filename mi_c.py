@@ -37,13 +37,16 @@ def encode_words(d):
     return out
 
 
-def main_mi(num, path):
+def main_mi(num, path, type):
     libname = os.path.abspath(os.path.join(os.path.dirname(__file__), "libmi.so"))
     mi = CDLL(libname)
     conn = sqlite3.connect(path)
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
 
-    arr_cat = get_collection_categories('reuters21578.tar')
+    if type is None:
+        arr_cat = get_collection_categories('reuters21578.tar')
+    else:
+        arr_cat, spec = get_collection_categories('reuters21578.tar', type)
     cursor = conn.cursor()
     cursor.execute("select * from inp where inp." + groupname[num] + "!='None'")
     # conn.commit()
@@ -76,9 +79,12 @@ def main_mi(num, path):
         words.update(set(body))
     widgets = [progressbar.Percentage(), progressbar.Bar()]
     mi.mi.restype = c_double
-    arr = list(arr_cat[num])
+    if type is None:
+        arr = list(arr_cat[num])
+    else:
+        arr = list(spec)
     bar = progressbar.ProgressBar(widgets=widgets, max_value=len(arr)).start()
-    for i in range(len(arr_cat[num])):
+    for i in range(len(arr)):
         for j in words:
             mi_v = mi.mi(array, len(all_arr), create_string_buffer(str.encode('|' + arr[i] + '|')), array1,
                          create_string_buffer(str.encode(j)))
@@ -100,8 +106,15 @@ if __name__ == "__main__":
     num = 4
     parser = argparse.ArgumentParser()
     parser.add_argument('path', type=str, help='Path to db')
+    parser.add_argument(
+        '-t',
+        '--type',
+        type=str,
+        default=None,
+        help='Type of MI'
+    )
     arg = parser.parse_args()
-    main_mi(num, arg.path)
+    main_mi(num, arg.path, arg.type)
 
 
 def test():
