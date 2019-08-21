@@ -53,18 +53,21 @@ def clf(obj, vocab_, matrix, num_of_themes, limit):
     :param matrix: матрица лямбда, генерируемая OnlineLDA
     :param num_of_themes: количество тем классификации
     :param limit: порог принадлежности документа теме
-    :return:
+    :return: список тем, соответсвующих данному документу
     """
     (wordids, wordcts) = ldaO.parse_doc_list([obj], vocab_)  # TODO переписать костыль
     wordids = wordids[0]
     wordcts = wordcts[0]
+    len_of_obj = sum(wordcts)
+    out = []
+    if len_of_obj == 0:
+        return out
     score = [0 for _ in range(num_of_themes)]
     for i in range(len(wordids)):
         for j in range(num_of_themes):
             score[j] += matrix[wordids[i]][j] * wordcts[i]
-    out = []
     for i in range(len(score)):
-        if score[i] > limit:
+        if score[i] / len_of_obj > limit:
             out.append(i)
     return out
 
@@ -117,22 +120,104 @@ def using_lda_no_changes_doc(vocab, K, D, alpha, eta, tau0, kappa):
     :param kappa: параметр модели, по умолчанию равен 0.75, его описание см. в onlineldavb.py
     :return: параметры модели: матрица лямбда и словарь (приведённый к типу для работы с Online LDA)
     """
-    model = ldaO.OnlineLDA(vocab, K, len(D),alpha, eta, tau0, kappa)
-#                           0.1, 0.01, 1, 0.75)
-    s = math.floor(len(D)/1000)  # batch size
+    model = ldaO.OnlineLDA(vocab, K, len(D), alpha, eta, tau0, kappa)
+    #                           0.1, 0.01, 1, 0.75)
+    s = math.floor(len(D) / 1000)  # batch size
     docs = list(map(lambda x: bpt(x).translate(str.maketrans('\n', ' ')), D))
     for i in range(1000):
-        print(i)
+        # print(i)
         d = [d for d in docs[(i * s):((i + 1) * s)]]
         model.update_lambda_docs(d)
     d = [d for d in docs[((i + 1) * s):len(docs)]]
     model.update_lambda_docs(d)
-    # np.savetxt('lambda', model._lambda.T)
+    np.savetxt('new_lambda', model._lambda.T)
     return model._lambda.T, model._vocab
 
 
-def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25):
-    conn = sqlite3.connect('collection_test_topics.db')
+def translate(len_real_cat, D, vocab, matrix, average):
+    """
+    соответствие между темами из Online LDA и темами Reuters
+    :param len_real_cat:
+    :param D:
+    :param vocab:
+    :param matrix:
+    :param average:
+    :return: матрица перевода
+    """
+    edu = []
+    for i in D:
+        edu.append(clf(bpt(i), vocab, matrix, len_real_cat, average))
+    # возможно, есть способ лучше (устанавливаем соответствие между кодом темы и её названием)
+    themes_as_num = [dict() for _ in range(len_real_cat)]
+    for i in range(len_real_cat):
+        for j in range(len(edu)):
+            if i in edu[j]:
+                for theme in D[j].topics_array:
+                    if theme in themes_as_num[i].keys():
+                        themes_as_num[i][theme] += 1
+                    else:
+                        themes_as_num[i][theme] = 1
+
+    # теперь посчитаем распределение вероятностей названий тем по номерам кластеров
+    for i in range(len(themes_as_num)):
+        count = 0
+        for j in themes_as_num[i].keys():
+            count += themes_as_num[i][j]
+        for j in themes_as_num[i].keys():
+            themes_as_num[i][j] = themes_as_num[i][j] / count
+
+    # построим таблицу перевода из номера кластера в название темы
+    translate_table = []
+
+    for i in range(len(themes_as_num)):
+        if len(themes_as_num[i]) == 0:
+            translate_table.append('None')
+        else:
+            translate_table.append(max(themes_as_num[i].items(), key=operator.itemgetter(1))[0])
+    # for i in range(len(themes_as_num)):
+    #     if len(themes_as_num[i]) == 0:
+    #         translate_table.append('None')
+    #     else:
+    #         translate_table.append(max([j if j[0] not in translate_table else (j[0], -float('inf')) for j in
+    #                                     themes_as_num[i].items()], key=operator.itemgetter(1))[0])
+    return translate_table
+
+
+def online_lda_clf(ddict, D, all_docs, test):
+    """
+    обучение и применение для тестового множества классификатора на основе Online LDA
+    :param ddict:
+    :param D:
+    :param all_docs:
+    :param test:
+    :return:
+    """
+    alpha = 0.1
+    eta = 0.01
+    tau0 = 1
+    kappa = 0.75
+    len_real_cat = 15
+    (matrix, vocab) = using_lda_no_changes_doc(ddict, len_real_cat, all_docs,
+                                               alpha, eta, tau0, kappa)
+    average = 0
+    for i in matrix:
+        for j in i:
+            average += j
+    average = average / (matrix.shape[0] * matrix.shape[1])
+
+    translate_table = translate(len_real_cat, D, vocab, matrix, average)
+    result = []
+    for i in test:
+        result.append(clf(bpt(i), vocab, matrix, len_real_cat, average))
+    # узнаем названия классов
+    result_new = []
+    for i in result:
+        result_new.append(set([translate_table[j] for j in i]))
+    return result_new
+
+
+def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=250, len_real_cat=15):
+    conn = sqlite3.connect('collection.db')
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
     cursor = conn.cursor()
     num = 4
@@ -152,7 +237,7 @@ def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25):
     cursor.execute("select * from test where test." + groupname[num] + "!= 'None'")
     test = decode_from_db(cursor.fetchall(), cat)
     cursor.execute("select * from inp ")
-    (matrix, vocab) = using_lda_no_changes_doc(ddict, len(real_cat), decode_from_db(cursor.fetchall(), cat),
+    (matrix, vocab) = using_lda_no_changes_doc(ddict, len_real_cat, decode_from_db(cursor.fetchall(), cat),
                                                alpha, eta, tau0, kappa)
     average = 0
     for i in matrix:
@@ -161,14 +246,14 @@ def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25):
     average = average / (matrix.shape[0] * matrix.shape[1])
     edu = []
     for i in D:
-        edu.append(clf(bpt(i), vocab, matrix, len(real_cat), average * 100))
+        edu.append(clf(bpt(i), vocab, matrix, len_real_cat, average))
     result = []
     for i in test:
-        result.append(clf(bpt(i), vocab, matrix, len(real_cat), average * 100))
+        result.append(clf(bpt(i), vocab, matrix, len_real_cat, average))
 
     # возможно, есть способ лучше (устанавливаем соответствие между кодом темы и её названием)
-    themes_as_num = [dict() for _ in range(len(real_cat))]
-    for i in range(len(real_cat)):
+    themes_as_num = [dict() for _ in range(len_real_cat)]
+    for i in range(len_real_cat):
         for j in range(len(edu)):
             if i in edu[j]:
                 for theme in D[j].topics_array:
@@ -204,52 +289,136 @@ def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25):
     edu_new = []
     for i in edu:
         edu_new.append(set([translate_table[j] for j in i]))
-
+    # print(edu_new)
     # замер точности для обучающего множества (micro)
-    result_score = 0
-    total_themes = 0
-    for i in D:
-        total_themes += len(i.topics_array)
-    for i in range(len(D)):
-        for theme in edu_new[i]:
-            if theme in D[i].topics_array:
-                result_score += 1
-    print(result_score / total_themes)
+    # tp = 0
+    # # tn = 0
+    # fp = 0
+    # fn = 0
+    # for i in range(len(D)):
+    #     for theme in edu_new[i]:
+    #         if theme in D[i].topics_array:
+    #             tp += 1
+    #         else:
+    #             fp += 1
+    #     for theme in D[i].topics_array:
+    #         if theme not in edu_new[i]:
+    #             fn += 1
+    # if tp + fp != 0:
+    #     micro_edu = tp / (tp + fp)
+    # else:
+    #     micro_edu = 0
+        # result_score = 0
+    # total_themes = 0
+    # for i in D:
+    #     total_themes += len(i.topics_array)
+    # for i in range(len(D)):
+    #     for theme in edu_new[i]:
+    #         if theme in D[i].topics_array:
+    #             result_score += 1
+    # print(result_score / total_themes)
 
     # узнаем названия классов
     result_new = []
     for i in result:
         result_new.append(set([translate_table[j] for j in i]))
 
-    # замер точности для тренировочного множества (micro)
-    result_score = 0
-    total_themes = 0
-    for i in test:
-        total_themes += len(i.topics_array)
+    # замер точности для тестового множества (micro)
+    tp = 0
+    # tn = 0
+    fp = 0
+    fn = 0
     for i in range(len(test)):
         for theme in result_new[i]:
             if theme in test[i].topics_array:
-                result_score += 1
-    print(result_score / total_themes)
-    micro = result_score / total_themes
+                tp += 1
+            else:
+                fp += 1
+        for theme in test[i].topics_array:
+            if theme not in result_new[i]:
+                fn += 1
+    if tp + fp != 0:
+        micro_test_p = tp / (tp + fp)
+    else:
+        micro_test_p = 0
+    micro_test_r = tp / (tp + fn)
+
+    # result_score = 0
+    # total_themes = 0
+    # for i in test:
+    #     total_themes += len(i.topics_array)
+    # for i in range(len(test)):
+    #     for theme in result_new[i]:
+    #         if theme in test[i].topics_array:
+    #             result_score += 1
+    # print(result_score / total_themes)
+    # micro = result_score / total_themes
 
     # замер точности для обучающего множества (macro)
-    result_score = 0
-    total_score = 0
-    average = 0
-    for current_theme in real_cat:
-        for i in range(len(D)):
-            if current_theme in D[i].topics_array:
-                total_score += 1
-                if current_theme in edu_new[i]:
-                    result_score += 1
-        average += result_score/total_score
-    print(average / len(real_cat))
+    # result_ = 0
+    # del real_cat
+    # for current_theme in real_cat:
+    #     tp = 0
+    #     fp = 0
+    #     fn = 0
+    #     for i in range(len(D)):
+    #         if current_theme in edu_new[i]:
+    #             if current_theme in D[i].topics_array:
+    #                 tp += 1
+    #             else:
+    #                 fp += 1
+    #         if current_theme in D[i].topics_array:
+    #             if current_theme not in edu_new[i]:
+    #                 fn += 1
+    #     result_ += tp/(tp+fn)
+    # macro_train = result_ / len(real_cat)
+    # result_score = 0
+    # total_score = 0
+    # average = 0
+    # for current_theme in real_cat:
+    #     for i in range(len(D)):
+    #         if current_theme in D[i].topics_array:
+    #             # total_score += 1
+    #             if current_theme in edu_new[i]:
+    #                 result_score += 1
+    #             else:
+    #                 total_score += 1
+    #     average += result_score / (total_score + result_score)
+    # macro_train = average / len(real_cat)
 
-    # замер точности для тренировочного множества (macro)
+    # замер точности для тестового множества (macro)
+    # result_ = 0
+    # result__ = 0
+    # del real_cat
+    # real_cat = set()
+    # for i in test:
+    #     real_cat.update(set(i.topics_array))
+    # for current_theme in real_cat:
+    #     tp = 0
+    #     fp = 0
+    #     fn = 0
+    #     for i in range(len(test)):
+    #         if current_theme in result_new[i]:
+    #             if current_theme in test[i].topics_array:
+    #                 tp += 1
+    #             else:
+    #                 fp += 1
+    #         else:
+    #             if current_theme not in result_new[i]:
+    #                 fn += 1
+    #     result_ += tp/(tp+fn)
+    #     if tp+fp > 0:
+    #         result__ += tp/(tp+fp)
+    #     else:
+    #         result__ = 0
+    # macro_test_r = result_ / len(real_cat)
+    # macro_test_p = result__ / len(real_cat)
+
     result_score = 0
     total_score = 0
+    total_score_ = 0
     average = 0
+    average_ = 0
     del real_cat
     real_cat = set()
     for i in test:
@@ -258,15 +427,29 @@ def main_lda(alpha=0.1, eta=0.01, tau0=1, kappa=0.75, num_words=25):
     for current_theme in real_cat:
         for i in range(len(test)):
             if current_theme in test[i].topics_array:
-                total_score += 1
-                if current_theme in result_new[i]:
+                if current_theme in edu_new[i]:
                     result_score += 1
-        average += result_score/total_score
-    print(average / len(real_cat))
-    macro = average / len(real_cat)
+                else:
+                    total_score += 1
+            elif current_theme in edu_new[i]:
+                total_score_ += 1
+        average += result_score / (total_score + result_score)
+        if (total_score_ + result_score)!=0:
+            average_ += result_score / (total_score_ + result_score)
+        else:
+            average_ += 0
+    macro_test_r = average / len(real_cat)
+    macro_test_p = average_ / len(real_cat)
     # print(edu)
     # print(result)
-    return micro, macro
+    print('\n')
+    # print(micro_edu)
+    print(micro_test_r)
+    print(macro_test_r)
+    print(micro_test_p)
+    # print(macro_train)
+    print(macro_test_p)
+    # return micro_edu, micro_test, macro_train, macro_test
 
 
 if __name__ == "__main__":
