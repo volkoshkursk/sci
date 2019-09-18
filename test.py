@@ -16,7 +16,7 @@ n = 100
 # bar = NB.progressbar.ProgressBar(widgets=widgets, max_value=n).start()
 
 
-def visualisation(arr):
+def visualisation(arr, name):
     for iteration in range(0, len(arr), 10):
         arr[iteration] = sorted(arr[iteration], key=lambda kv: -kv[1])
         x = []
@@ -34,7 +34,7 @@ def visualisation(arr):
         plt.legend(
             bbox_to_anchor=(-0.12, 0.8, 0.25, 0.25),
             loc='lower left', labels=x[:5])
-        fig.savefig('pic/' + str(iteration) + '.png')
+        fig.savefig(name + str(iteration) + '.png')
         # plt.show()
         plt.clf()
         del fig
@@ -87,8 +87,12 @@ if __name__ == '__main__':
         help='shutdown (default: True)'
     )
     arg = parser.parse_args()
+    if arg.multiple_information:
+        name = 'pic_' + arg.type + '_mi'
+    else:
+        name = 'pic_' + arg.type
     num_words = 10
-    conn = sqlite3.connect('collection/collection_10.db')
+    conn = sqlite3.connect('collection_10.db')
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
     cursor = conn.cursor()
     num = 4
@@ -174,20 +178,20 @@ if __name__ == '__main__':
 
     save(clf_arr, clf_2_arr, lda_arr, classes)
     plt.plot(clf_arr)
-    plt.savefig('pic/NB.png', format='png', dpi=100)
+    plt.savefig(name + '/NB.png', format='png', dpi=100)
     # plt.show()
     plt.clf()
     # plt.plot(lda_arr)
     # plt.savefig('pic/lda.png', format='png', dpi=100)
     for i in range(len(clf_2_arr)):
         plt.plot(clf_2_arr[i], label=str(i))
-        plt.savefig('pic/MultiNB_' + str(i) + '.png', format='png', dpi=100)
+        plt.savefig(name + '/MultiNB_' + str(i) + '.png', format='png', dpi=100)
         plt.clf()
     plt.clf()
-    visualisation(classes)
+    visualisation(classes, name)
     for i in range(len(lda_arr)):
         plt.plot(lda_arr[i], label=str(i))
-        plt.savefig('pic/lda_' + str(i) + '.png', format='png', dpi=100)
+        plt.savefig(name + '/lda_' + str(i) + '.png', format='png', dpi=100)
         plt.clf()
     plt.clf()
     if arg.shutdown:
