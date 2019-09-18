@@ -682,9 +682,10 @@ def count_docs(cat, D):
     return themes
 
 
-def estimate(result, test):
+def estimate(result, test, real_cat=None):
     """
     замер точности (micro/macro, recall/precision)
+    :param real_cat: список тем (если не указан, берутся все темы из тестового множества)
     :param result: результат рааботы классификатора на тестовом множестве
     :param test: "правильные" ответы
     :return: 4 оценки: micro recall, micro precision, macro recall, macro precision
@@ -718,9 +719,10 @@ def estimate(result, test):
     # замер точности для тестового множества (macro)
     result_ = 0
     result__ = 0
-    real_cat = set()
-    for i in test:
-        real_cat.update(set(i.topics_array))
+    if real_cat is None:
+        real_cat = set()
+        for i in test:
+            real_cat.update(set(i.topics_array))
     for current_theme in real_cat:
         tp = 0
         fp = 0

@@ -3,8 +3,9 @@ from _lda import *
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import NB
+import os
 
-# from gen_lda import balance_lda
+from gen_lda import balance_lda, balance_own_lda
 from gen_clones import generate
 
 n = 100
@@ -68,7 +69,7 @@ def save(*args):
 
 if __name__ == '__main__':
     num_words = 10
-    conn = sqlite3.connect('collection/collection_10.db')
+    conn = sqlite3.connect('collection_10.db')
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
     cursor = conn.cursor()
     num = 4
@@ -111,7 +112,7 @@ if __name__ == '__main__':
         clf_2 = NB.MultipleNaiveBayes(C, spec)
         clf_2.fit(train[0], train[1])
         # clf_2_arr.append(sum(estimate(clf_2.predict(test), test))/4)
-        temp = estimate(clf_2.predict(test), test)
+        temp = estimate(clf_2.predict(test), test, spec)
         for j in range(4):
             clf_2_arr[j].append(temp[j])
 
@@ -119,7 +120,7 @@ if __name__ == '__main__':
         print('LDA')
         # lda_arr.append(sum(estimate(online_lda_clf(ddict, D, all_docs, test), test))/4)
 
-        temp = estimate(online_lda_clf(ddict, D, all_docs, test), test)
+        temp = estimate(online_lda_clf(ddict, D, all_docs, test), test, spec)
 
         for j in range(4):
             lda_arr[j].append(temp[j])
@@ -129,9 +130,13 @@ if __name__ == '__main__':
         min_el = min(sort_docs(spec, D).items(), key=lambda x: len(x[1]))
         # del clf_1, train
         print('Update')
+        # if
         # D.append(balance_lda(ddict, all_docs, min_el[0], D, cat[num]))
-        themes = sort_docs(spec, D)
-        D += generate(themes[min_el[0]], 1)
+        D.append(balance_own_lda(ddict, all_docs, min_el[0], D, cat[num]))
+
+        # elif
+        # themes = sort_docs(spec, D)
+        # D += generate(themes[min_el[0]], 1)
 
     # bar.finish()
 
@@ -153,5 +158,6 @@ if __name__ == '__main__':
         plt.savefig('pic/lda_' + str(i) + '.png', format='png', dpi=100)
         plt.clf()
     plt.clf()
+    os.system('shutdown')
     # plt.show()
     # # plt.show()
