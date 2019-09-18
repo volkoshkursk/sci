@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import NB
 import os
+import argparse
 
 from gen_lda import balance_lda, balance_own_lda
 from gen_clones import generate
@@ -68,8 +69,25 @@ def save(*args):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='test script for category balancers')
+    parser.add_argument('type', choices=['lda', 'own_lda', 'copy'], help='Mode')
+    parser.add_argument(
+        '-mi',
+        '--multiple_information',
+        type=bool,
+        default=False,
+        help='run version with adding multiple information (default: False)'
+    )
+    parser.add_argument(
+        '-sd',
+        '--shutdown',
+        type=bool,
+        default=True,
+        help='shutdown (default: True)'
+    )
+    arg = parser.parse_args()
     num_words = 10
-    conn = sqlite3.connect('collection_10.db')
+    conn = sqlite3.connect('collection/collection_10.db')
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
     cursor = conn.cursor()
     num = 4
@@ -77,11 +95,16 @@ if __name__ == '__main__':
     # для коллекции из 10 - это 10 тем
     # C = dict.fromkeys(cat[num])
     C = dict()
+    mi = dict()  # первая координата - тема, вторая - слово
     for i in spec:
         cursor.execute(
-            "select word from " + groupname[num] +
+            "select word, mi from " + groupname[num] +
             " where classname== '" + i + "' order by mi desc limit " + str(num_words))
-        C[i] = list(map(lambda x: x[0], cursor.fetchall()))
+        # help_ = list(map(lambda x: x[0], cursor.fetchall()))
+        cursor_fetchall = cursor.fetchall()
+        C[i] = list(map(lambda x: x[0], cursor_fetchall))
+        mi[i] = dict(cursor_fetchall)
+        del cursor_fetchall
     cursor.execute("select * from inp where inp." + groupname[num] + "!= 'None' ")
     ddict = []
     for i in list(C.values()):
@@ -130,13 +153,15 @@ if __name__ == '__main__':
         min_el = min(sort_docs(spec, D).items(), key=lambda x: len(x[1]))
         # del clf_1, train
         print('Update')
-        # if
-        # D.append(balance_lda(ddict, all_docs, min_el[0], D, cat[num]))
-        D.append(balance_own_lda(ddict, all_docs, min_el[0], D, cat[num]))
-
-        # elif
-        # themes = sort_docs(spec, D)
-        # D += generate(themes[min_el[0]], 1)
+        if arg.type == 'lda':
+            if not arg.multiple_information:
+                D.append(balance_lda(ddict, all_docs, min_el[0], D, cat[num]))
+        elif balance_lda == 'own_lda':
+            if not arg.multiple_information:
+                D.append(balance_own_lda(ddict, all_docs, min_el[0], D, cat[num]))
+        elif balance_lda == 'copy':
+            themes = sort_docs(spec, D)
+            D += generate(themes[min_el[0]], 1)
 
     # bar.finish()
 
@@ -158,6 +183,7 @@ if __name__ == '__main__':
         plt.savefig('pic/lda_' + str(i) + '.png', format='png', dpi=100)
         plt.clf()
     plt.clf()
-    os.system('shutdown')
+    if arg.shutdown:
+        os.system('shutdown')
     # plt.show()
     # # plt.show()
