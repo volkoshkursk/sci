@@ -7,6 +7,7 @@ import os
 import argparse
 
 from gen_lda import balance_lda, balance_own_lda
+from gen_lda_mi import balance_lda_mi, balance_own_lda_mi, gen_mi
 from gen_clones import generate
 
 n = 100
@@ -20,9 +21,9 @@ def visualisation(arr):
         arr[iteration] = sorted(arr[iteration], key=lambda kv: -kv[1])
         x = []
         y = []
-        for j in arr[iteration]:
-            x.append(j[0])
-            y.append(float(j[1]))
+        for jj in arr[iteration]:
+            x.append(jj[0])
+            y.append(float(jj[1]))
         dpi = 80
         fig = plt.figure(dpi=dpi, figsize=(512 / dpi, 384 / dpi))
         mpl.rcParams.update({'font.size': 9})
@@ -40,9 +41,9 @@ def visualisation(arr):
     arr[len(arr)-1] = sorted(arr[len(arr)-1], key=lambda kv: -kv[1])
     x = []
     y = []
-    for j in arr[len(arr)-1]:
-        x.append(j[0])
-        y.append(float(j[1]))
+    for jj in arr[len(arr) - 1]:
+        x.append(jj[0])
+        y.append(float(jj[1]))
     dpi = 80
     fig = plt.figure(dpi=dpi, figsize=(512 / dpi, 384 / dpi))
     mpl.rcParams.update({'font.size': 9})
@@ -61,8 +62,8 @@ def visualisation(arr):
 
 def save(*args):
     text = ''
-    for i in args:
-        text += str(i) + '\n'
+    for ii in args:
+        text += str(ii) + '\n'
     f = open('result', 'w')
     f.write(text)
     f.close()
@@ -70,7 +71,7 @@ def save(*args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='test script for category balancers')
-    parser.add_argument('type', choices=['lda', 'own_lda', 'copy'], help='Mode')
+    parser.add_argument('type', choices=['lda', 'own_lda', 'copy', 'mi_only'], help='Mode')
     parser.add_argument(
         '-mi',
         '--multiple_information',
@@ -156,12 +157,18 @@ if __name__ == '__main__':
         if arg.type == 'lda':
             if not arg.multiple_information:
                 D.append(balance_lda(ddict, all_docs, min_el[0], D, cat[num]))
-        elif balance_lda == 'own_lda':
+            else:
+                D.append(balance_lda_mi(ddict, all_docs, min_el[0], D, cat[num], mi[min_el[0]]))
+        elif arg.type == 'own_lda':
             if not arg.multiple_information:
                 D.append(balance_own_lda(ddict, all_docs, min_el[0], D, cat[num]))
-        elif balance_lda == 'copy':
+            else:
+                D.append(balance_own_lda_mi(ddict, all_docs, min_el[0], D, cat[num], mi[min_el[0]]))
+        elif arg.type == 'copy':
             themes = sort_docs(spec, D)
             D += generate(themes[min_el[0]], 1)
+        elif arg.type == 'mi_only':
+            gen_mi(mi[min_el[0]],  min_el[0], cat[num])
 
     # bar.finish()
 

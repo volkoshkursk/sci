@@ -131,7 +131,7 @@ def balance_own_lda(ddict, all_docs, theme, D, cat):
     max_ = sum(vocab_index.values())
     for i in range(130):
         temp = random.random()
-        for j in range(len(vocab_index.keys())):
+        for j in vocab_index.keys():
             temp -= vocab_index[j]/max_
             if temp < 0:
                 result_index.append(j)
