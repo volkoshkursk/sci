@@ -34,7 +34,7 @@ def visualisation(arr, name):
         plt.legend(
             bbox_to_anchor=(-0.12, 0.8, 0.25, 0.25),
             loc='lower left', labels=x[:5])
-        fig.savefig(name + str(iteration) + '.png')
+        fig.savefig(name + '/' + str(iteration) + '.png')
         # plt.show()
         plt.clf()
         del fig
@@ -75,14 +75,16 @@ if __name__ == '__main__':
     parser.add_argument(
         '-mi',
         '--multiple_information',
-        type=bool,
+        action='store_const',
+        const=True,
         default=False,
         help='run version with adding multiple information (default: False)'
     )
     parser.add_argument(
         '-sd',
         '--shutdown',
-        type=bool,
+        action='store_const',
+        const=False,
         default=True,
         help='shutdown (default: True)'
     )
