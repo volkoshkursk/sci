@@ -54,7 +54,7 @@ def visualisation(arr, name):
     plt.legend(
         bbox_to_anchor=(-0.12, 0.8, 0.25, 0.25),
         loc='lower left', labels=x[:5])
-    fig.savefig('pic/' + str(len(arr)-1) + '.png')
+    fig.savefig(name + '/' + str(len(arr)-1) + '.png')
     # plt.show()
     plt.clf()
     del fig
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     else:
         name = 'pic_' + arg.type
     num_words = 10
-    conn = sqlite3.connect('collection_10.db')
+    conn = sqlite3.connect('collection/collection_10.db')
     groupname = ['exchanges', 'orgs', 'people', 'places', 'topics_array']
     cursor = conn.cursor()
     num = 4
@@ -170,11 +170,11 @@ if __name__ == '__main__':
                 D.append(balance_own_lda(ddict, all_docs, min_el[0], D, cat[num]))
             else:
                 D.append(balance_own_lda_mi(ddict, all_docs, min_el[0], D, cat[num], mi[min_el[0]]))
-        elif arg.type == 'copy':
+        elif arg.type == 'copy':  # todo было зависание
             themes = sort_docs(spec, D)
             D += generate(themes[min_el[0]], 1)
         elif arg.type == 'mi_only':
-            gen_mi(mi[min_el[0]],  min_el[0], cat[num])
+            D.append(gen_mi(mi[min_el[0]],  min_el[0], cat[num]))
 
     # bar.finish()
 
